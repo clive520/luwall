@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User } from '@/types';
-import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Settings } from 'lucide-react';
+import { ThemeSwitcher } from './ThemeSwitcher';
+import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase } from 'lucide-react';
 
 interface NavbarProps {
   onOpenCreateBoard?: () => void;
@@ -47,7 +48,7 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-amber-100 shadow-xs">
+    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xs transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo 與品牌 */}
         <Link href="/" className="flex items-center gap-3 group">
@@ -56,27 +57,30 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-800 to-amber-600 bg-clip-text text-transparent">
+              <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-amber-800 to-amber-600 dark:from-amber-400 dark:to-yellow-400 bg-clip-text text-transparent">
                 鹿鳴牆
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300">
                 LuWall
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 leading-none">教學互動協作看板</p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-none">教學互動協作看板</p>
           </div>
         </Link>
 
         {/* 右側操作選單 */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* 🎨 五大視覺主題切換器 */}
+          <ThemeSwitcher />
+
           {/* 管理員專屬後台入口按鈕 */}
           {!loading && user?.role === 'admin' && (
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition shadow-xs"
             >
               <Crown className="w-3.5 h-3.5 text-amber-600" />
-              <span>系統後台</span>
+              <span className="hidden sm:inline">系統後台</span>
             </Link>
           )}
 
@@ -84,7 +88,7 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           {onOpenCreateBoard && (
             <button
               onClick={handleCreateBoardClick}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-xs transition ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-xs transition ${
                 user?.role === 'teacher' || user?.role === 'admin'
                   ? 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
                   : 'bg-amber-600/80 hover:bg-amber-700'
@@ -96,8 +100,8 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           )}
 
           {!loading && user ? (
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-center gap-2 sm:gap-2.5">
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700">
                 {user.role === 'admin' ? (
                   <Crown className="w-4 h-4 text-amber-600" />
                 ) : user.role === 'teacher' ? (
@@ -108,36 +112,29 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
                   <GraduationCap className="w-4 h-4 text-blue-600" />
                 )}
                 <div className="text-left leading-tight">
-                  <div className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                  <div className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
                     <span>{user.name}</span>
                     {user.role === 'admin' ? (
-                      <span className="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded-md font-extrabold">
+                      <span className="text-[10px] bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 px-1 rounded-md font-extrabold">
                         管理員
                       </span>
                     ) : user.role === 'teacher' ? (
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-md font-bold">
+                      <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1 rounded-md font-bold">
                         教師
                       </span>
                     ) : (
-                      <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.2 rounded-md font-medium">
+                      <span className="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 px-1 rounded-md font-medium">
                         學生
                       </span>
                     )}
                   </div>
-                  <span className="text-[10px] text-gray-400 block">
-                    {user.provider === 'luyang_sso'
-                      ? '鹿陽 SSO'
-                      : user.provider === 'google'
-                      ? 'Google'
-                      : '帳密會員'}
-                  </span>
                 </div>
               </div>
 
               <button
                 onClick={handleLogout}
                 title="登出"
-                className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -145,10 +142,10 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           ) : !loading ? (
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-amber-300 text-amber-800 hover:bg-amber-50 text-xs sm:text-sm font-medium transition"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-amber-300 dark:border-amber-600 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-slate-800 text-xs sm:text-sm font-medium transition"
             >
               <LogIn className="w-4 h-4" />
-              <span>登入 / 註冊</span>
+              <span>登入</span>
             </Link>
           ) : null}
         </div>

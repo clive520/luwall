@@ -1,26 +1,86 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+:root, [data-theme="day"] {
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --border-color: #e4e4e7;
+  --accent-color: #ea580c;
+  --accent-hover: #c2410c;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="night"] {
+  --bg-page: #090d16;
+  --bg-surface: #131b2e;
+  --bg-input: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border-color: #334155;
+  --accent-color: #f59e0b;
+  --accent-hover: #d97706;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+[data-theme="sepia"] {
+  --bg-page: #fbf0d9;
+  --bg-surface: #fef9ed;
+  --bg-input: #ffffff;
+  --text-primary: #38200d;
+  --text-secondary: #78350f;
+  --border-color: #e6d3ad;
+  --accent-color: #b45309;
+  --accent-hover: #92400e;
 }
 
+[data-theme="emerald"] {
+  --bg-page: #f0fdf4;
+  --bg-surface: #ffffff;
+  --bg-input: #ffffff;
+  --text-primary: #064e3b;
+  --text-secondary: #047857;
+  --border-color: #a7f3d0;
+  --accent-color: #059669;
+  --accent-hover: #047857;
+}
+
+[data-theme="ocean"] {
+  --bg-page: #081226;
+  --bg-surface: #0f1f3d;
+  --bg-input: #172a4d;
+  --text-primary: #f0f9ff;
+  --text-secondary: #7dd3fc;
+  --border-color: #1e3a66;
+  --accent-color: #0284c7;
+  --accent-hover: #0369a1;
+}
+
+/* 核心背景與字體響應 */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 徹底強化全域輸入框文字清晰度 */
+input, textarea, select {
+  color: #030712 !important; /* 確保輸入文字絕對深黑 */
+  font-weight: 600 !important;
+}
+
+[data-theme="night"] input,
+[data-theme="night"] textarea,
+[data-theme="night"] select,
+[data-theme="ocean"] input,
+[data-theme="ocean"] textarea,
+[data-theme="ocean"] select {
+  color: #ffffff !important; /* 深色模式下確保字體高亮純白 */
+}
+
+/* 清晰 placeholder */
+::placeholder {
+  color: #6b7280 !important;
+  opacity: 0.85 !important;
+  font-weight: 500 !important;
 }

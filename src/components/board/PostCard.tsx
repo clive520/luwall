@@ -342,7 +342,7 @@ export function PostCard({
           )}
 
           {/* 留言輸入框 */}
-          <form onSubmit={handleAddComment} className="mt-2 space-y-1.5">
+          <form onSubmit={handleAddComment} className="mt-2 space-y-2">
             {!currentUser && (
               <input
                 type="text"
@@ -350,21 +350,21 @@ export function PostCard({
                 placeholder="請輸入您的暱稱（訪客必填）*"
                 value={commentAuthor}
                 onChange={(e) => setCommentAuthor(e.target.value)}
-                className="w-full text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden focus:border-amber-400"
+                className="w-full text-xs font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl px-3 py-2 outline-hidden focus:border-amber-600 focus:ring-1 focus:ring-amber-200 shadow-2xs"
               />
             )}
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <input
                 type="text"
                 placeholder="寫下你的想法或回饋..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden focus:border-amber-400"
+                className="flex-1 text-xs font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl px-3 py-2 outline-hidden focus:border-amber-600 focus:ring-1 focus:ring-amber-200 shadow-2xs"
               />
               <button
                 type="submit"
                 disabled={submittingComment || !newComment.trim()}
-                className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 transition"
+                className="px-3 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 transition shadow-xs font-bold flex items-center justify-center"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

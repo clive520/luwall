@@ -23,12 +23,12 @@ interface CreatePostModalProps {
 }
 
 const PASTEL_COLORS = [
-  { name: '經典黃', value: '#fef08a', border: 'border-yellow-300' },
-  { name: '活力粉', value: '#fbcfe8', border: 'border-pink-300' },
-  { name: '清爽綠', value: '#bbf7d0', border: 'border-green-300' },
-  { name: '晨曦藍', value: '#bae6fd', border: 'border-sky-300' },
-  { name: '溫柔紫', value: '#e9d5ff', border: 'border-purple-300' },
-  { name: '純淨白', value: '#ffffff', border: 'border-gray-300' },
+  { name: '經典暖黃', value: '#fef08a', border: 'border-yellow-400' },
+  { name: '活力櫻粉', value: '#fbcfe8', border: 'border-pink-400' },
+  { name: '清爽薄荷', value: '#bbf7d0', border: 'border-green-400' },
+  { name: '晨曦晴空', value: '#bae6fd', border: 'border-sky-400' },
+  { name: '薰衣草紫', value: '#e9d5ff', border: 'border-purple-400' },
+  { name: '雪白簡約', value: '#ffffff', border: 'border-gray-400' },
 ];
 
 export function CreatePostModal({
@@ -160,53 +160,54 @@ export function CreatePostModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in overflow-y-auto">
       <div
         style={{ backgroundColor: selectedColor }}
-        className="rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-black/10 relative my-8 transition-colors duration-200"
+        className="rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border-2 border-black/20 relative my-8 transition-colors duration-200"
       >
+        {/* 關閉按鈕 */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-900 hover:bg-black/5 rounded-full transition"
+          className="absolute top-4 right-4 p-2 text-gray-700 hover:text-black hover:bg-black/10 rounded-full transition"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h3 className="text-xl font-extrabold text-gray-950 mb-1">
+        <h3 className="text-xl font-black text-gray-950 mb-1 tracking-tight">
           新增分享便籤 📝
         </h3>
-        <p className="text-xs text-gray-600 mb-3">
-          張貼至：<span className="font-semibold">{board.title}</span>
+        <p className="text-xs text-gray-800 font-semibold mb-3">
+          張貼至：<span className="font-extrabold">{board.title}</span>
         </p>
 
         {/* 訪客身分提示 */}
         {!currentUser && (
-          <div className="mb-3 p-2.5 rounded-xl bg-blue-100/70 border border-blue-200 text-xs text-blue-900 flex items-center gap-2">
-            <Info className="w-4 h-4 shrink-0" />
+          <div className="mb-3 p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs text-blue-950 font-bold flex items-center gap-2">
+            <Info className="w-4 h-4 shrink-0 text-blue-700" />
             <span>您目前為訪客身分，發文後將無法編輯或刪除，請務必填妥暱稱。</span>
           </div>
         )}
 
         {/* 審核提示 */}
         {board.requireApproval && currentUser?.role !== 'teacher' && currentUser?.role !== 'admin' && (
-          <div className="mb-3 p-2.5 rounded-xl bg-amber-200/60 border border-amber-300 text-xs text-amber-900 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mb-3 p-2.5 rounded-xl bg-amber-200/90 border border-amber-400 text-xs text-amber-950 font-bold flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-amber-800" />
             <span>此看板已開啟課堂審核，送出後需經由老師批准才會公開。</span>
           </div>
         )}
 
         {error && (
-          <div className="mb-3 p-2.5 rounded-xl bg-red-100 border border-red-300 text-xs text-red-800">
+          <div className="mb-3 p-2.5 rounded-xl bg-red-100 border border-red-300 text-xs text-red-900 font-bold">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* 發文者姓名（未登入時必填） */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 發文者姓名（未登入時必填）—— 徹底實色高對比 */}
           {!currentUser && (
             <div>
-              <label className="block text-xs font-bold text-gray-800 mb-1">
-                你的名字 / 座號暱稱 *
+              <label className="block text-xs font-black text-gray-950 mb-1">
+                你的名字 / 座號暱稱 * (訪客必填)
               </label>
               <input
                 type="text"
@@ -214,62 +215,72 @@ export function CreatePostModal({
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="例如：陳大明 05 或 課堂小偵探"
-                className="w-full text-sm bg-white/90 border border-black/10 rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-amber-500/50"
+                className="w-full text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-400 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs"
               />
             </div>
           )}
 
-          {/* 標題 */}
+          {/* 標題 —— 純白實底高對比極清晰 */}
           <div>
+            <label className="block text-xs font-black text-gray-950 mb-1">
+              卡片標題（選填）
+            </label>
             <input
               type="text"
-              placeholder="給卡片取個小標題（選填）..."
+              placeholder="例如：操場邊發現的奇特植物..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full font-bold text-base bg-white/80 border border-black/10 rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-amber-500/50"
+              className="w-full font-black text-base bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-400 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs"
             />
           </div>
 
-          {/* 內文 */}
+          {/* 內文 —— 純白實底高對比極清晰 */}
           <div>
+            <label className="block text-xs font-black text-gray-950 mb-1">
+              內容心得 *
+            </label>
             <textarea
               rows={4}
               placeholder="寫下你的觀察、想法或心得..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full text-sm bg-white/80 border border-black/10 rounded-xl px-3.5 py-2.5 outline-hidden focus:ring-2 focus:ring-amber-500/50 resize-none font-medium text-gray-800"
+              className="w-full text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-400 rounded-xl px-3.5 py-3 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs resize-none"
             />
           </div>
 
-          {/* 顏色挑選 */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-gray-700 mr-1">便籤顏色：</span>
-            {PASTEL_COLORS.map((c) => (
-              <button
-                key={c.value}
-                type="button"
-                onClick={() => setSelectedColor(c.value)}
-                style={{ backgroundColor: c.value }}
-                className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                  selectedColor === c.value ? 'scale-125 border-gray-900 shadow-xs' : 'border-black/10'
-                }`}
-                title={c.name}
-              />
-            ))}
+          {/* 便籤顏色挑選 */}
+          <div className="flex items-center gap-2 bg-white/60 p-2.5 rounded-2xl border border-black/10">
+            <span className="text-xs font-black text-gray-950 mr-1">便籤顏色：</span>
+            <div className="flex items-center gap-2">
+              {PASTEL_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setSelectedColor(c.value)}
+                  style={{ backgroundColor: c.value }}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                    selectedColor === c.value
+                      ? 'scale-125 border-gray-950 ring-2 ring-amber-500 shadow-md'
+                      : 'border-black/20 hover:scale-110'
+                  }`}
+                  title={c.name}
+                />
+              ))}
+            </div>
           </div>
 
           {/* 多媒體工具按鈕列 */}
-          <div className="pt-2 border-t border-black/10 flex items-center justify-between">
+          <div className="pt-2 border-t border-black/15 flex items-center justify-between">
             <div className="flex items-center gap-2">
               {/* 圖片按鈕 */}
               <label
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black cursor-pointer transition shadow-xs ${
                   mediaType === 'image'
                     ? 'bg-amber-600 text-white'
-                    : 'bg-white/80 hover:bg-white text-gray-700'
+                    : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-300'
                 }`}
               >
-                <ImageIcon className="w-3.5 h-3.5" />
+                <ImageIcon className="w-4 h-4" />
                 <span>{uploadingImage ? '上傳中...' : '照片 (5MB)'}</span>
                 <input
                   type="file"
@@ -284,13 +295,13 @@ export function CreatePostModal({
               <button
                 type="button"
                 onClick={() => setMediaType(mediaType === 'audio' ? 'none' : 'audio')}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition shadow-xs ${
                   mediaType === 'audio'
                     ? 'bg-amber-600 text-white'
-                    : 'bg-white/80 hover:bg-white text-gray-700'
+                    : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-300'
                 }`}
               >
-                <Mic className="w-3.5 h-3.5" />
+                <Mic className="w-4 h-4" />
                 <span>語音 (3分鐘)</span>
               </button>
 
@@ -298,13 +309,13 @@ export function CreatePostModal({
               <button
                 type="button"
                 onClick={() => setMediaType(mediaType === 'link' ? 'none' : 'link')}
-                className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition shadow-xs ${
                   mediaType === 'link'
                     ? 'bg-amber-600 text-white'
-                    : 'bg-white/80 hover:bg-white text-gray-700'
+                    : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-300'
                 }`}
               >
-                <LinkIcon className="w-3.5 h-3.5" />
+                <LinkIcon className="w-4 h-4" />
                 <span>連結/YouTube</span>
               </button>
             </div>
@@ -322,24 +333,24 @@ export function CreatePostModal({
           )}
 
           {mediaType === 'link' && (
-            <div className="bg-white/90 p-3 rounded-2xl border border-black/10 space-y-2">
+            <div className="bg-white p-3.5 rounded-2xl border-2 border-gray-300 space-y-2 shadow-xs">
               <div className="flex gap-2">
                 <input
                   type="url"
                   placeholder="貼上 YouTube 影片網址或網頁連結..."
                   value={linkInput}
                   onChange={(e) => setLinkInput(e.target.value)}
-                  className="flex-1 text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden"
+                  className="flex-1 text-xs font-bold bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-2 outline-hidden focus:border-amber-600 text-gray-950"
                 />
                 <button
                   type="button"
                   onClick={handleApplyLink}
-                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold"
+                  className="px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs"
                 >
                   套用
                 </button>
               </div>
-              <p className="text-[10px] text-gray-500">
+              <p className="text-[11px] text-gray-600 font-medium">
                 💡 貼入 YouTube 連結可直接在便籤內播放影片！
               </p>
             </div>
@@ -347,8 +358,8 @@ export function CreatePostModal({
 
           {/* 已加入的附件預覽狀態 */}
           {attachment && (
-            <div className="p-2.5 rounded-xl bg-white/90 border border-black/10 flex items-center justify-between text-xs">
-              <span className="font-semibold text-emerald-800 truncate">
+            <div className="p-3 rounded-xl bg-white border-2 border-emerald-500 flex items-center justify-between text-xs shadow-xs">
+              <span className="font-extrabold text-emerald-900 truncate">
                 已附加：{attachment.type === 'image' ? '📸 照片' : attachment.type === 'audio' ? '🎙️ 錄音檔' : '🔗 外部連結'}
               </span>
               <button
@@ -357,7 +368,7 @@ export function CreatePostModal({
                   setAttachment(undefined);
                   setMediaType('none');
                 }}
-                className="text-red-500 hover:text-red-700 font-bold ml-2"
+                className="text-red-600 hover:text-red-800 font-black ml-2"
               >
                 移除
               </button>
@@ -369,7 +380,7 @@ export function CreatePostModal({
             <button
               type="submit"
               disabled={submitting || uploadingImage}
-              className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold shadow-md transition disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-black text-sm shadow-md transition disabled:opacity-50"
             >
               {submitting ? (
                 <>

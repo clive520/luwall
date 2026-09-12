@@ -155,7 +155,7 @@ function LoginForm() {
       {/* 第三區：自建帳號密碼登入 */}
       <form onSubmit={handleLocalLogin} className="space-y-3.5">
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1">
+          <label className="block text-xs font-black text-gray-900 mb-1">
             帳號
           </label>
           <div className="relative">
@@ -165,14 +165,14 @@ function LoginForm() {
               placeholder="輸入帳號"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl outline-hidden focus:ring-2 focus:ring-amber-500/50"
+              className="w-full pl-9 pr-3 py-2.5 text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-2xs"
             />
-            <UserIcon className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <UserIcon className="w-4 h-4 text-gray-500 absolute left-3 top-3.5" />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-gray-700 mb-1">
+          <label className="block text-xs font-black text-gray-900 mb-1">
             密碼
           </label>
           <div className="relative">
@@ -182,9 +182,9 @@ function LoginForm() {
               placeholder="輸入密碼"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-xl outline-hidden focus:ring-2 focus:ring-amber-500/50"
+              className="w-full pl-9 pr-3 py-2.5 text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-2xs"
             />
-            <Lock className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+            <Lock className="w-4 h-4 text-gray-500 absolute left-3 top-3.5" />
           </div>
         </div>
 

@@ -111,7 +111,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 看板標題 */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label className="block text-xs font-black text-gray-900 mb-1">
               看板標題 *
             </label>
             <input
@@ -120,13 +120,13 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
               placeholder="例如：四年甲班・閱讀心得與生活札記 🌿"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full text-sm font-semibold border border-gray-200 rounded-xl px-3.5 py-2.5 outline-hidden focus:ring-2 focus:ring-amber-500/50"
+              className="w-full text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-2xs"
             />
           </div>
 
           {/* 說明或任務指引 */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
+            <label className="block text-xs font-black text-gray-900 mb-1">
               課堂指引或說明（選填）
             </label>
             <textarea
@@ -134,7 +134,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
               placeholder="給學生的小提示，例如：每位同學請貼上 1 張照片並附上 50 字心得..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-amber-500/50 resize-none"
+              className="w-full text-xs font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-300 rounded-xl px-3.5 py-2 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-2xs resize-none"
             />
           </div>
 
