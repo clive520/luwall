@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         name: userName,
         email: userEmail,
         avatarUrl,
-        role: 'teacher', // Google 登入者預設可開板
+        role: 'student', // 任何人登入之後，預設都是學生身分
         createdAt: new Date().toISOString(),
       };
       db.saveUser(user);

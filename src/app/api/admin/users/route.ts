@@ -12,22 +12,31 @@ async function requireAdmin() {
   return user;
 }
 
-// 取得所有使用者列表
+// 檢驗是否為教師或管理員（具備檢視與核定成員身分之權限）
+async function requireTeacherOrAdmin() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== 'admin' && user.role !== 'teacher')) {
+    return null;
+  }
+  return user;
+}
+
+// 取得所有使用者列表（教師與管理員皆可存取）
 export async function GET() {
-  const admin = await requireAdmin();
-  if (!admin) {
-    return NextResponse.json({ error: '權限不足：僅系統管理員可存取' }, { status: 403 });
+  const operator = await requireTeacherOrAdmin();
+  if (!operator) {
+    return NextResponse.json({ error: '權限不足：僅教師與系統管理員可存取' }, { status: 403 });
   }
 
   const users = db.getUsers().map(({ passwordHash: _, ...safeUser }) => safeUser);
   return NextResponse.json({ users });
 }
 
-// 修改使用者身分角色（核定誰是教師、誰是系統管理員）
+// 修改使用者身分角色（教師與管理員可核定/變更為教師、學生或管理員）
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin();
-  if (!admin) {
-    return NextResponse.json({ error: '權限不足：僅系統管理員可操作' }, { status: 403 });
+  const operator = await requireTeacherOrAdmin();
+  if (!operator) {
+    return NextResponse.json({ error: '權限不足：僅教師與系統管理員可操作' }, { status: 403 });
   }
 
   try {
@@ -48,7 +57,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // 防止唯一的管理員降級自己造成系統無管理員
-    if (targetUser.id === admin.id && role !== 'admin') {
+    if (targetUser.role === 'admin' && role !== 'admin') {
       const allAdmins = db.getUsers().filter((u) => u.role === 'admin');
       if (allAdmins.length <= 1) {
         return NextResponse.json({ error: '無法降級最後一位系統管理員' }, { status: 400 });

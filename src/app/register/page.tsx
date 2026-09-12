@@ -139,35 +139,14 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* 身分 */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                身分類型
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRole('student')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border transition ${
-                    role === 'student'
-                      ? 'border-amber-600 bg-amber-50 text-amber-900'
-                      : 'border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  🎓 學生
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('teacher')}
-                  className={`py-2 px-3 text-xs font-bold rounded-xl border transition ${
-                    role === 'teacher'
-                      ? 'border-amber-600 bg-amber-50 text-amber-900'
-                      : 'border-gray-200 bg-white text-gray-600'
-                  }`}
-                >
-                  🧑‍🏫 教師 (具開板權限)
-                </button>
+            {/* 預設身分提示 */}
+            <div className="p-3 bg-amber-50/80 border border-amber-200/80 rounded-2xl">
+              <div className="flex items-center gap-1.5 text-xs font-black text-amber-900 mb-1">
+                <span>🎓 預設身分：學生</span>
               </div>
+              <p className="text-[11px] font-bold text-amber-800/80 leading-relaxed">
+                新註冊成員預設皆為學生身分；若您為任課教師，請於建立帳號後由校內現有教師或管理者將您的身分調整為「教師」。
+              </p>
             </div>
 
             {/* 密碼 */}

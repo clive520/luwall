@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
         username,
         name,
         email,
-        role: role === 'teacher' ? 'teacher' : 'student',
+        role: 'student', // 任何人註冊，預設皆為學生身分，需由現有教師或管理員調整
         createdAt: new Date().toISOString(),
       };
 

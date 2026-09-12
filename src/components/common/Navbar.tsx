@@ -73,14 +73,21 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           {/* 🎨 五大視覺主題切換器 */}
           <ThemeSwitcher />
 
-          {/* 管理員專屬後台入口按鈕 */}
-          {!loading && user?.role === 'admin' && (
+          {/* 教師與管理員身分管理入口按鈕 */}
+          {!loading && (user?.role === 'admin' || user?.role === 'teacher') && (
             <Link
               href="/admin"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition shadow-xs"
+              title={user.role === 'admin' ? '系統與成員後台' : '成員身分核定與管理'}
             >
-              <Crown className="w-3.5 h-3.5 text-amber-600" />
-              <span className="hidden sm:inline">系統後台</span>
+              {user.role === 'admin' ? (
+                <Crown className="w-3.5 h-3.5 text-amber-600" />
+              ) : (
+                <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
+              )}
+              <span className="hidden sm:inline">
+                {user.role === 'admin' ? '系統後台' : '身分管理'}
+              </span>
             </Link>
           )}
 

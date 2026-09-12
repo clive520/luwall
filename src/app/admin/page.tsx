@@ -31,7 +31,7 @@ export default function AdminPage() {
     try {
       const meRes = await fetch('/api/auth/me');
       const meData = await meRes.json();
-      if (!meData.user || meData.user.role !== 'admin') {
+      if (!meData.user || (meData.user.role !== 'admin' && meData.user.role !== 'teacher')) {
         router.push('/');
         return;
       }
@@ -130,9 +130,11 @@ export default function AdminPage() {
     );
   }
 
-  if (!currentUser || currentUser.role !== 'admin') {
+  if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'teacher')) {
     return null;
   }
+
+  const isAdmin = currentUser.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -150,14 +152,24 @@ export default function AdminPage() {
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Crown className="w-5 h-5 text-amber-500" />
-                <h1 className="text-2xl font-black text-gray-900">系統管理員後台</h1>
-                <span className="text-xs bg-amber-100 text-amber-900 font-bold px-2 py-0.5 rounded-full">
-                  Admin
+                {isAdmin ? (
+                  <Crown className="w-5 h-5 text-amber-500" />
+                ) : (
+                  <Briefcase className="w-5 h-5 text-emerald-600" />
+                )}
+                <h1 className="text-2xl font-black text-gray-900">
+                  {isAdmin ? '系統管理員後台' : '校內成員身分核定與管理'}
+                </h1>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  isAdmin ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
+                }`}>
+                  {isAdmin ? 'Admin' : 'Teacher'}
                 </span>
               </div>
               <p className="text-xs text-gray-500">
-                核定教師與管理員身分、帳號註銷，以及全站看板掌控
+                {isAdmin
+                  ? '核定教師與管理員身分、帳號註銷，以及全站看板掌控'
+                  : '檢視校內已登入成員名單，並核定將學生提升為教師或調整身分'}
               </p>
             </div>
           </div>
@@ -283,7 +295,7 @@ export default function AdminPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-3 text-right">
-                      {u.id !== currentUser.id && (
+                      {isAdmin && u.id !== currentUser.id && (
                         <button
                           onClick={() => handleDeleteUser(u.id, u.name)}
                           title="移除此帳號"
