@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Post, Comment, User, Section } from '@/types';
+import { Post, Comment, User, Section, MediaAttachment } from '@/types';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { EditPostModal } from '@/components/board/EditPostModal';
@@ -125,25 +125,46 @@ export function PostDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, prevPost, nextPost, onClose, onSelectPost]);
 
-  // 自動解析附件：若無 attachment，但 content 中含有網址，自動作為預覽附件 (使用 useMemo 快取避免每次重繪重複執行正規表達式)
-  const effectiveAttachment = useMemo(() => {
-    if (!post) return null;
-    if (post.attachment) return post.attachment;
+  // 1. 圖片或語音檔案附件
+  const fileAttachment = useMemo(() => {
+    if (post?.attachment && (post.attachment.type === 'image' || post.attachment.type === 'audio')) {
+      return post.attachment;
+    }
+    return null;
+  }, [post?.attachment]);
+
+  // 2. 解析出便籤中的所有外部連結與 YouTube (含附件與內文網址，去重複)
+  const linkAttachments = useMemo(() => {
+    if (!post) return [];
+    const list: MediaAttachment[] = [];
+    const seen = new Set<string>();
+
+    if (post.attachment && post.attachment.type === 'link' && post.attachment.url) {
+      list.push(post.attachment);
+      seen.add(post.attachment.url.trim().toLowerCase());
+    }
+
     const contentUrls = findUrls(post.content);
-    if (contentUrls.length === 0) return null;
-    const url = contentUrls[0];
-    const ytId = extractYouTubeId(url);
-    return {
-      type: 'link' as const,
-      url,
-      title: ytId ? 'YouTube 影片' : url,
-      metadata: ytId
-        ? {
-            youtubeId: ytId,
-            ogImage: getYouTubeThumbnail(ytId),
-          }
-        : undefined,
-    };
+    for (const url of contentUrls) {
+      const normalized = url.trim().toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        const ytId = extractYouTubeId(url);
+        list.push({
+          type: 'link',
+          url,
+          title: ytId ? 'YouTube 影片' : url,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        });
+      }
+    }
+
+    return list;
   }, [post]);
 
   if (!isOpen || !post) return null;
@@ -340,19 +361,19 @@ export function PostDetailModal({
             {/* 左側：成果作品展示區 (60%) */}
             <div className="lg:col-span-7 p-6 sm:p-8 space-y-6 overflow-y-auto">
               {/* 多媒體大版面展示 */}
-              {effectiveAttachment && (
-                <div className="rounded-2xl overflow-hidden border border-black/5 bg-gray-50 dark:bg-slate-800/50 shadow-inner">
+              {(fileAttachment || linkAttachments.length > 0) && (
+                <div className="space-y-4">
                   {/* 照片：高畫質大圖 */}
-                  {effectiveAttachment.type === 'image' && (
-                    <div className="relative group/img flex items-center justify-center bg-black/5 min-h-[260px] max-h-[500px]">
+                  {fileAttachment?.type === 'image' && (
+                    <div className="rounded-2xl overflow-hidden border border-black/5 bg-gray-50 dark:bg-slate-800/50 shadow-inner relative group/img flex items-center justify-center min-h-[260px] max-h-[500px]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={effectiveAttachment.url}
-                        alt={effectiveAttachment.title || post.title || '便籤成果照片'}
+                        src={fileAttachment.url}
+                        alt={fileAttachment.title || post.title || '便籤成果照片'}
                         className="w-full h-auto max-h-[500px] object-contain rounded-2xl"
                       />
                       <a
-                        href={effectiveAttachment.url}
+                        href={fileAttachment.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-black/70 hover:bg-black text-white text-xs font-bold backdrop-blur flex items-center gap-1.5 opacity-80 group-hover/img:opacity-100 transition shadow-md"
@@ -365,8 +386,8 @@ export function PostDetailModal({
                   )}
 
                   {/* 語音錄音：清晰波形與專屬大播放器 */}
-                  {effectiveAttachment.type === 'audio' && (
-                    <div className="p-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl flex flex-col gap-3">
+                  {fileAttachment?.type === 'audio' && (
+                    <div className="p-6 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-2xl flex flex-col gap-3 border border-black/5">
                       <div className="flex items-center gap-3">
                         <div className="p-3 rounded-2xl bg-amber-600 text-white shadow-md">
                           <Volume2 className="w-6 h-6" />
@@ -378,14 +399,16 @@ export function PostDetailModal({
                           <p className="text-xs text-gray-500">點擊播放聆聽錄音分享</p>
                         </div>
                       </div>
-                      <audio controls src={effectiveAttachment.url} className="w-full mt-2" autoPlay={false} />
+                      <audio controls src={fileAttachment.url} className="w-full mt-2" autoPlay={false} />
                     </div>
                   )}
 
-                  {/* YouTube 影片或一般網址：大尺寸預覽 */}
-                  {effectiveAttachment.type === 'link' && (
-                    <div>
-                      <LinkPreviewCard attachment={effectiveAttachment} />
+                  {/* 外部連結或 YouTube：多個連結皆展示完整縮圖與預覽卡片 */}
+                  {linkAttachments.length > 0 && (
+                    <div className="space-y-3">
+                      {linkAttachments.map((linkAtt, idx) => (
+                        <LinkPreviewCard key={`${linkAtt.url}-${idx}`} attachment={linkAtt} />
+                      ))}
                     </div>
                   )}
                 </div>

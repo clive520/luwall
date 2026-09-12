@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Post, Comment, User, Section } from '@/types';
+import { Post, Comment, User, Section, MediaAttachment } from '@/types';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { EditPostModal } from '@/components/board/EditPostModal';
@@ -166,25 +166,51 @@ export function PostCard({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 自動解析附件：若無 attachment，但 content 中含有網址 (YouTube 或一般連結)，自動作為預覽附件 (以 useMemo 快取避免重複正規表達式運算)
-  const effectiveAttachment = useMemo(() => {
-    if (post.attachment) return post.attachment;
+  // 1. 圖片或錄音檔案附件
+  const fileAttachment = useMemo(() => {
+    if (post.attachment && (post.attachment.type === 'image' || post.attachment.type === 'audio')) {
+      return post.attachment;
+    }
+    return null;
+  }, [post.attachment]);
+
+  // 2. 解析出貼文中所有的外部連結與 YouTube (含附件與內文網址，去重複)
+  const linkAttachments = useMemo(() => {
+    const list: MediaAttachment[] = [];
+    const seen = new Set<string>();
+
+    // 若原始附件為 link 類型
+    if (post.attachment && post.attachment.type === 'link' && post.attachment.url) {
+      list.push(post.attachment);
+      seen.add(post.attachment.url.trim().toLowerCase());
+    }
+
+    // 從內文中解析出的所有網址
     const urls = findUrls(post.content);
-    if (urls.length === 0) return null;
-    const url = urls[0];
-    const ytId = extractYouTubeId(url);
-    return {
-      type: 'link' as const,
-      url,
-      title: ytId ? 'YouTube 影片' : url,
-      metadata: ytId
-        ? {
-            youtubeId: ytId,
-            ogImage: getYouTubeThumbnail(ytId),
-          }
-        : undefined,
-    };
+    for (const rawUrl of urls) {
+      const normalized = rawUrl.trim().toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        const ytId = extractYouTubeId(rawUrl);
+        list.push({
+          type: 'link',
+          url: rawUrl,
+          title: ytId ? 'YouTube 影片' : rawUrl,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        });
+      }
+    }
+
+    return list;
   }, [post.attachment, post.content]);
+
+  // 便籤卡片上呈現的連結預覽 (若有 2 個或超過 2 個連結，將兩者縮圖/截圖同時呈現)
+  const displayLinks = useMemo(() => linkAttachments.slice(0, 2), [linkAttachments]);
 
   return (
     <div
@@ -269,23 +295,23 @@ export function PostCard({
           <LinkifiedText text={post.content} />
         </div>
 
-        {/* 多媒體附件區 */}
-        {effectiveAttachment && (
-          <div className="mt-3.5">
+        {/* 多媒體附件與外部連結縮圖預覽區 */}
+        {(fileAttachment || displayLinks.length > 0) && (
+          <div className="mt-3.5 space-y-2.5">
             {/* 圖片 */}
-            {effectiveAttachment.type === 'image' && (
+            {fileAttachment?.type === 'image' && (
               <div className="rounded-2xl overflow-hidden border border-black/5 bg-black/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={effectiveAttachment.url}
-                  alt={effectiveAttachment.title || '貼文照片'}
+                  src={fileAttachment.url}
+                  alt={fileAttachment.title || '貼文照片'}
                   className="w-full max-h-96 object-cover rounded-2xl transition hover:scale-[1.01]"
                 />
               </div>
             )}
 
             {/* 錄音音訊 */}
-            {effectiveAttachment.type === 'audio' && (
+            {fileAttachment?.type === 'audio' && (
               <div
                 onClick={(e) => e.stopPropagation()}
                 className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3 border border-black/5"
@@ -295,15 +321,22 @@ export function PostCard({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-gray-800 mb-1">語音分享作業</div>
-                  <audio controls src={effectiveAttachment.url} className="w-full h-8" />
+                  <audio controls src={fileAttachment.url} className="w-full h-8" />
                 </div>
               </div>
             )}
 
-            {/* 外部連結或 YouTube (含縮圖、可點擊與原地播放) */}
-            {effectiveAttachment.type === 'link' && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <LinkPreviewCard attachment={effectiveAttachment} />
+            {/* 外部連結或 YouTube 縮圖卡片 (若有 2 個或超過 2 個連結，將兩者縮圖/截圖同時呈現) */}
+            {displayLinks.length > 0 && (
+              <div onClick={(e) => e.stopPropagation()} className="space-y-2.5">
+                {displayLinks.map((linkAtt, idx) => (
+                  <LinkPreviewCard key={`${linkAtt.url}-${idx}`} attachment={linkAtt} />
+                ))}
+                {linkAttachments.length > 2 && (
+                  <p className="text-[11px] text-gray-500 font-medium px-1">
+                    另有 {linkAttachments.length - 2} 個連結，點擊便籤檢視完整內容
+                  </p>
+                )}
               </div>
             )}
           </div>

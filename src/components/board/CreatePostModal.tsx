@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Board, User, MediaAttachment, Section } from '@/types';
 import { AudioRecorder } from '@/components/media/AudioRecorder';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
@@ -263,6 +263,35 @@ export function CreatePostModal({
     });
     setMediaType('audio');
   };
+
+  // 解析內文中額外偵測到的連結縮圖 (例如第二個連結)
+  const extraLinksFromContent = useMemo(() => {
+    const urls = findUrls(content);
+    const list: MediaAttachment[] = [];
+    const seen = new Set<string>();
+    if (attachment && attachment.type === 'link' && attachment.url) {
+      seen.add(attachment.url.trim().toLowerCase());
+    }
+    for (const u of urls) {
+      const norm = u.trim().toLowerCase();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        const ytId = extractYouTubeId(u);
+        list.push({
+          type: 'link',
+          url: u,
+          title: ytId ? 'YouTube 影片' : u,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        });
+      }
+    }
+    return list;
+  }, [content, attachment]);
 
   // 送出貼文
   const handleSubmit = async (e: React.FormEvent) => {
@@ -678,6 +707,28 @@ export function CreatePostModal({
                     </div>
                   </div>
                 )}
+
+                {/* 顯示內文中額外偵測到的連結縮圖 (例如第二個連結) */}
+                {extraLinksFromContent.length > 0 && (
+                  <div className="space-y-2 pt-1 border-t border-black/10">
+                    <p className="text-[11px] text-gray-600 font-bold">💡 內文同時包含之連結預覽縮圖：</p>
+                    {extraLinksFromContent.slice(0, 1).map((extraLink, idx) => (
+                      <LinkPreviewCard key={`${extraLink.url}-${idx}`} attachment={extraLink} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 若無主附件，但內文中有偵測到多個連結時之預覽 */}
+            {!attachment && extraLinksFromContent.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-black text-gray-900">🔗 內文網址縮圖預覽：</p>
+                <div className="space-y-2">
+                  {extraLinksFromContent.slice(0, 2).map((linkAtt, idx) => (
+                    <LinkPreviewCard key={`${linkAtt.url}-${idx}`} attachment={linkAtt} />
+                  ))}
+                </div>
               </div>
             )}
           </div>
