@@ -130,7 +130,7 @@ export function ShelfView({
       )}
 
       {/* 橫向可滑動主題欄位容器 */}
-      <div className="flex flex-row items-start gap-5 overflow-x-auto pb-8 pt-2 min-h-[calc(100vh-230px)] scrollbar-thin scrollbar-thumb-gray-300">
+      <div className="flex flex-row items-start gap-6 overflow-x-auto pb-16 pt-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
         {sections.map((section) => {
           // 找出屬於該主題的貼文
           const sectionPosts = posts
@@ -140,82 +140,84 @@ export function ShelfView({
           return (
             <div
               key={section.id}
-              className="w-72 sm:w-80 shrink-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xs flex flex-col max-h-[calc(100vh-250px)]"
+              className="w-76 sm:w-84 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xs flex flex-col transition-all"
             >
-              {/* 欄位頭部 */}
-              <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between gap-2">
-                {editingSectionId === section.id ? (
-                  <div className="flex items-center gap-1 flex-1">
-                    <input
-                      type="text"
-                      value={editingTitle}
-                      onChange={(e) => setEditingTitle(e.target.value)}
-                      className="w-full text-xs font-bold bg-white text-gray-950 border border-amber-500 rounded-lg px-2 py-1 outline-hidden"
-                      autoFocus
-                    />
-                    <button
-                      onClick={() => handleSaveEditSection(section.id)}
-                      className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
-                    >
-                      <Check className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setEditingSectionId(null)}
-                      className="p-1 text-gray-400 hover:bg-gray-100 rounded"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <h3 className="font-extrabold text-sm text-gray-900 dark:text-gray-100 truncate">
-                      {section.title}
-                    </h3>
-                    <span className="text-[11px] font-bold px-2 py-0.2 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 shrink-0">
-                      {sectionPosts.length}
-                    </span>
-                  </div>
-                )}
-
-                {/* 教師管理選單 (重命名/刪除) */}
-                {isTeacher && editingSectionId !== section.id && (
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      onClick={() => {
-                        setEditingSectionId(section.id);
-                        setEditingTitle(section.title);
-                      }}
-                      title="修改主題名稱"
-                      className="p-1 text-gray-400 hover:text-amber-600 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    {sections.length > 1 && (
+              {/* 欄位頭部（主題標題與新增便籤按鈕，吸頂維持可見） */}
+              <div className="sticky top-2 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-t-3xl border-b border-gray-100 dark:border-slate-800 shadow-2xs">
+                <div className="p-4 flex items-center justify-between gap-2">
+                  {editingSectionId === section.id ? (
+                    <div className="flex items-center gap-1 flex-1">
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        className="w-full text-xs font-bold bg-white text-gray-950 border border-amber-500 rounded-lg px-2 py-1 outline-hidden"
+                        autoFocus
+                      />
                       <button
-                        onClick={() => handleDeleteSection(section.id, section.title)}
-                        title="刪除此主題"
-                        className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
+                        onClick={() => handleSaveEditSection(section.id)}
+                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Check className="w-4 h-4" />
                       </button>
-                    )}
-                  </div>
-                )}
+                      <button
+                        onClick={() => setEditingSectionId(null)}
+                        className="p-1 text-gray-400 hover:bg-gray-100 rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <h3 className="font-extrabold text-sm text-gray-900 dark:text-gray-100 truncate">
+                        {section.title}
+                      </h3>
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 shrink-0">
+                        {sectionPosts.length}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* 教師管理選單 (重命名/刪除) */}
+                  {isTeacher && editingSectionId !== section.id && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => {
+                          setEditingSectionId(section.id);
+                          setEditingTitle(section.title);
+                        }}
+                        title="修改主題名稱"
+                        className="p-1 text-gray-400 hover:text-amber-600 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      {sections.length > 1 && (
+                        <button
+                          onClick={() => handleDeleteSection(section.id, section.title)}
+                          title="刪除此主題"
+                          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 欄位頂部：在此主題新增便籤快捷鍵 */}
+                <div className="px-3 pb-3">
+                  <button
+                    onClick={() => onOpenCreatePost(section.id)}
+                    className="w-full py-2 px-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 text-amber-900 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-300/40 transition shadow-2xs"
+                  >
+                    <Plus className="w-4 h-4 text-amber-600" />
+                    <span>在此主題貼便籤</span>
+                  </button>
+                </div>
               </div>
 
-              {/* 欄位頂部：在此主題新增便籤快捷鍵 */}
-              <div className="p-3 border-b border-gray-100/60 dark:border-slate-800/60">
-                <button
-                  onClick={() => onOpenCreatePost(section.id)}
-                  className="w-full py-2 px-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 active:bg-amber-500/30 text-amber-900 dark:text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 border border-amber-300/40 transition shadow-2xs"
-                >
-                  <Plus className="w-4 h-4 text-amber-600" />
-                  <span>在此主題貼便籤</span>
-                </button>
-              </div>
-
-              {/* 該主題下的便籤卡片垂直串流 */}
-              <div className="p-3 overflow-y-auto flex-1 space-y-4 scrollbar-thin">
+              {/* 該主題下的便籤卡片垂直串流（隨便籤數量向下自然延伸） */}
+              <div className="p-3 space-y-4">
                 {sectionPosts.length === 0 ? (
                   <div className="text-center py-10 text-gray-400 dark:text-gray-500 text-xs font-medium">
                     此主題尚無便籤，<br />
@@ -240,7 +242,7 @@ export function ShelfView({
 
         {/* 最右側：新增主題分類欄位（教師/管理員可見） */}
         {isTeacher ? (
-          <div className="w-72 sm:w-80 shrink-0">
+          <div className="w-76 sm:w-84 shrink-0 sticky top-2">
             {!isAddingSection ? (
               <button
                 onClick={() => setIsAddingSection(true)}

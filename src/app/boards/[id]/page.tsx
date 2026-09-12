@@ -222,7 +222,7 @@ export default function BoardPage({
       </div>
 
       {/* 多主題分欄內容主體 */}
-      <main className="flex-1 w-full overflow-x-hidden">
+      <main className="flex-1 w-full pb-16">
         <ShelfView
           board={board}
           sections={sections}
