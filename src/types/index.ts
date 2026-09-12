@@ -23,6 +23,7 @@ export interface Board {
   coverColor: string; // 漸層或背景顏色
   layoutType: BoardLayoutType; // 第一期 MVP 為 'stream'，相容其他 5 種
   allowGuest: boolean; // 是否允許訪客免登入發文
+  isPublic?: boolean; // 是否公開給未登入者瀏覽（若為 false 則僅限校內登入者瀏覽）
   requireApproval: boolean; // 是否開啟審核機制
   reactionType: ReactionType; // 回饋模式
   profanityFilter: boolean; // 不雅詞過濾器

@@ -63,6 +63,16 @@ export function CreatePostModal({
     }
   }, [defaultSectionId, sections, isOpen]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   // 上傳圖片處理
@@ -174,49 +184,60 @@ export function CreatePostModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fade-in overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-xs animate-fade-in"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         style={{ backgroundColor: selectedColor }}
-        className="rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl border-2 border-black/20 relative my-8 transition-colors duration-200"
+        className="rounded-3xl max-w-lg w-full max-h-[85vh] flex flex-col shadow-2xl border-2 border-black/20 overflow-hidden relative transition-colors duration-200"
       >
-        {/* 關閉按鈕 */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-700 hover:text-black hover:bg-black/10 rounded-full transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <h3 className="text-xl font-black text-gray-950 mb-1 tracking-tight">
-          新增分享便籤 📝
-        </h3>
-        <p className="text-xs text-gray-800 font-semibold mb-3">
-          張貼至：<span className="font-extrabold">{board.title}</span>
-        </p>
-
-        {/* 訪客提示 */}
-        {!currentUser && (
-          <div className="mb-3 p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs text-blue-950 font-bold flex items-center gap-2">
-            <Info className="w-4 h-4 shrink-0 text-blue-700" />
-            <span>您目前為訪客身分，發文後將無法編輯或刪除，請務必填妥暱稱。</span>
+        {/* 固定頂部標頭（叉叉永遠點得到） */}
+        <div className="px-5 py-3.5 bg-black/5 border-b border-black/10 flex items-center justify-between shrink-0">
+          <div>
+            <h3 className="text-base font-black text-gray-950 tracking-tight leading-tight">
+              新增分享便籤 📝
+            </h3>
+            <p className="text-[11px] text-gray-800 font-semibold truncate max-w-xs sm:max-w-sm">
+              張貼至：<span className="font-extrabold">{board.title}</span>
+            </p>
           </div>
-        )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 text-gray-700 hover:text-black hover:bg-black/10 active:bg-black/20 rounded-full transition"
+            title="關閉視窗 (Esc)"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-        {/* 審核提示 */}
-        {board.requireApproval && currentUser?.role !== 'teacher' && currentUser?.role !== 'admin' && (
-          <div className="mb-3 p-2.5 rounded-xl bg-amber-200/90 border border-amber-400 text-xs text-amber-950 font-bold flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-amber-800" />
-            <span>此看板已開啟課堂審核，送出後需經由老師批准才會公開。</span>
-          </div>
-        )}
+        {/* 可滾動表單主體 */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
+          <div className="p-5 space-y-4 flex-1">
+            {/* 訪客提示 */}
+            {!currentUser && (
+              <div className="p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs text-blue-950 font-bold flex items-center gap-2">
+                <Info className="w-4 h-4 shrink-0 text-blue-700" />
+                <span>您目前為訪客身分，發文後將無法編輯或刪除，請務必填妥暱稱。</span>
+              </div>
+            )}
 
-        {error && (
-          <div className="mb-3 p-2.5 rounded-xl bg-red-100 border border-red-300 text-xs text-red-900 font-bold">
-            {error}
-          </div>
-        )}
+            {/* 審核提示 */}
+            {board.requireApproval && currentUser?.role !== 'teacher' && currentUser?.role !== 'admin' && (
+              <div className="p-2.5 rounded-xl bg-amber-200/90 border border-amber-400 text-xs text-amber-950 font-bold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-800" />
+                <span>此看板已開啟課堂審核，送出後需經由老師批准才會公開。</span>
+              </div>
+            )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-2.5 rounded-xl bg-red-100 border border-red-300 text-xs text-red-900 font-bold">
+                {error}
+              </div>
+            )}
           {/* 主題分類選擇器（若看板具備多主題） */}
           {sections.length > 0 && (
             <div>
@@ -410,21 +431,30 @@ export function CreatePostModal({
             </div>
           )}
 
-          {/* 送出按鈕 */}
-          <div className="pt-2">
+          </div>
+
+          {/* 底部固定操作欄 */}
+          <div className="px-5 py-3 bg-black/5 border-t border-black/10 flex items-center justify-end gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl bg-white/90 hover:bg-white text-gray-800 text-xs font-bold transition shadow-xs"
+            >
+              取消
+            </button>
             <button
               type="submit"
               disabled={submitting || uploadingImage}
-              className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-black text-sm shadow-md transition disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black shadow-xs transition disabled:opacity-50 flex items-center gap-1.5"
             >
               {submitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   <span>發布中...</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                   <span>貼到鹿鳴牆上 📌</span>
                 </>
               )}

@@ -9,6 +9,7 @@ import { ShelfView } from '@/components/board/ShelfView';
 import { CreatePostModal } from '@/components/board/CreatePostModal';
 import { QRCodeModal } from '@/components/board/QRCodeModal';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
+import { BoardSettingsModal } from '@/components/board/BoardSettingsModal';
 import {
   QrCode,
   Plus,
@@ -17,6 +18,9 @@ import {
   UserCheck,
   Radio,
   Layers,
+  Settings,
+  Globe,
+  Lock,
 } from 'lucide-react';
 
 export default function BoardPage({
@@ -34,21 +38,28 @@ export default function BoardPage({
   const [isOwner, setIsOwner] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRestricted, setIsRestricted] = useState(false);
 
   // 彈窗狀態
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [activeSectionId, setActiveSectionId] = useState<string | undefined>(undefined);
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // 載入看板資料
   const fetchBoardData = useCallback(async () => {
     try {
       const res = await fetch(`/api/boards/${id}`);
-      if (!res.ok) {
-        throw new Error('找不到此看板或已被移除');
-      }
       const data = await res.json();
+      if (!res.ok) {
+        if (data.isRestricted) {
+          setIsRestricted(true);
+          setError('🔒 此看板為校內私人看板，請先以學校帳號登入後檢視！');
+          return;
+        }
+        throw new Error(data.error || '找不到此看板或已被移除');
+      }
       setBoard(data.board);
       setSections(data.sections || []);
       setPosts(data.posts || []);
@@ -68,7 +79,7 @@ export default function BoardPage({
 
   // 設定 SSE 即時同步監聽
   useEffect(() => {
-    if (!id) return;
+    if (!id || isRestricted) return;
     const eventSource = new EventSource(`/api/boards/${id}/stream`);
 
     eventSource.onmessage = (event) => {
@@ -85,7 +96,7 @@ export default function BoardPage({
     return () => {
       eventSource.close();
     };
-  }, [id]);
+  }, [id, isRestricted]);
 
   const handlePostUpdated = (updatedPost: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
@@ -96,6 +107,11 @@ export default function BoardPage({
   };
 
   const handleOpenCreatePost = (sectionId?: string) => {
+    if (board && !board.allowGuest && !currentUser) {
+      alert('此看板目前設定「需登入帳號才可發表」，請先登入您的帳號！');
+      router.push('/login');
+      return;
+    }
     setActiveSectionId(sectionId);
     setIsCreatePostOpen(true);
   };
@@ -113,6 +129,40 @@ export default function BoardPage({
     );
   }
 
+  // 私人看板未登入提示
+  if (isRestricted) {
+    return (
+      <div className="min-h-screen bg-amber-50/30 flex flex-col">
+        <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-3xl max-w-md w-full text-center shadow-lg border border-amber-100">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center text-2xl">
+              🔒
+            </div>
+            <h3 className="text-lg font-black text-gray-900 mb-2">校內專屬私人看板</h3>
+            <p className="text-xs text-gray-600 mb-6 leading-relaxed">
+              此看板已被設定為校內專屬，未登入者無法瀏覽內容。請先登入鹿陽國小 SSO 或一般帳號後檢視！
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Link
+                href="/login"
+                className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold shadow-xs hover:bg-amber-700 transition"
+              >
+                前往登入 🪪
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-xs font-bold hover:bg-gray-200 transition"
+              >
+                返回大廳
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !board) {
     return (
       <div className="min-h-screen bg-amber-50/30 flex items-center justify-center p-4">
@@ -122,7 +172,7 @@ export default function BoardPage({
           <p className="text-xs text-gray-500 mb-6">{error || '看板可能已不存在'}</p>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-bold shadow-xs hover:bg-amber-700"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-amber-600 text-white text-xs font-bold shadow-xs hover:bg-amber-700"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>返回大廳</span>
@@ -131,6 +181,8 @@ export default function BoardPage({
       </div>
     );
   }
+
+  const isTeacherOrAdmin = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
@@ -178,6 +230,17 @@ export default function BoardPage({
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
                   主題分類：{sections.length} 個
                 </span>
+                {board.isPublic === false ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400/30 text-amber-100 font-bold">
+                    <Lock className="w-3 h-3" />
+                    校內私人看板
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
+                    <Globe className="w-3 h-3" />
+                    公開看板
+                  </span>
+                )}
                 {board.allowGuest ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
                     <UserCheck className="w-3 h-3" />
@@ -185,7 +248,7 @@ export default function BoardPage({
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 text-white/90">
-                    需登入參與
+                    需登入才可發表
                   </span>
                 )}
                 {board.requireApproval && (
@@ -197,7 +260,7 @@ export default function BoardPage({
               </div>
             </div>
 
-            {/* 操作按鈕群（投影 QR Code、新增卡片） */}
+            {/* 操作按鈕群（投影 QR Code、看板設定、新增卡片） */}
             <div className="flex flex-wrap items-center gap-2 sm:self-end">
               {/* QR Code 投影 */}
               <button
@@ -207,6 +270,18 @@ export default function BoardPage({
                 <QrCode className="w-4 h-4" />
                 <span>投影 QR Code 📱</span>
               </button>
+
+              {/* 教師 / 管理員專屬：看板設定按鈕 */}
+              {isTeacherOrAdmin && (
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
+                  title="管理看板隱私與發表權限"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>看板設定 ⚙️</span>
+                </button>
+              )}
 
               {/* 新增便籤 */}
               <button
@@ -257,6 +332,13 @@ export default function BoardPage({
         isOpen={isCreateBoardOpen}
         onClose={() => setIsCreateBoardOpen(false)}
         onBoardCreated={() => router.refresh()}
+      />
+
+      <BoardSettingsModal
+        board={board}
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onBoardUpdated={(updatedBoard) => setBoard(updatedBoard)}
       />
     </div>
   );

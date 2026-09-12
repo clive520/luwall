@@ -121,6 +121,7 @@ const DEFAULT_BOARD: Board = {
   coverColor: 'from-emerald-500 to-teal-700',
   layoutType: 'shelf',
   allowGuest: true,
+  isPublic: true,
   requireApproval: false,
   reactionType: 'like',
   profanityFilter: true,
