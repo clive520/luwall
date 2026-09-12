@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    db.createBoard(newBoard);
+    await db.createBoard(newBoard);
     return NextResponse.json({ success: true, board: newBoard });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '建立看板失敗';

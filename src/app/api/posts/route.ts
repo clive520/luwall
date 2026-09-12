@@ -7,6 +7,7 @@ import { Post } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const user = await getCurrentUser();
     const body = await request.json();
     const {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '缺少看板 ID' }, { status: 400 });
     }
 
-    const board = db.getBoardById(boardId);
+    const board = await db.getBoardByIdAsync(boardId);
     if (!board) {
       return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
     }
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     // 若未指定 sectionId，自動綁定至該看板的第一個主題分欄
     let effectiveSectionId = sectionId;
     if (!effectiveSectionId) {
-      const existingSections = db.getSectionsByBoardId(boardId);
+      const existingSections = await db.getSectionsByBoardIdAsync(boardId);
       if (existingSections.length > 0) {
         effectiveSectionId = existingSections[0].id;
       }
@@ -100,7 +101,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    db.createPost(newPost);
+    await db.createPost(newPost);
     return NextResponse.json({ success: true, post: newPost });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '發表貼文失敗';
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
 // 編輯貼文內容或審核狀態
 export async function PATCH(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const user = await getCurrentUser();
     const body = await request.json();
     const { postId, status, title, content, color } = body;
@@ -124,7 +126,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: '找不到此貼文' }, { status: 404 });
     }
 
-    const board = db.getBoardById(post.boardId);
+    const board = await db.getBoardByIdAsync(post.boardId);
     const isAdmin = user?.role === 'admin';
     const isBoardOwner = user?.id === board?.createdBy;
     const isAuthor = user && user.id === post.authorId;
@@ -150,7 +152,7 @@ export async function PATCH(request: NextRequest) {
     if (content !== undefined) updates.content = content;
     if (color !== undefined) updates.color = color;
 
-    const updated = db.updatePost(postId, updates);
+    const updated = await db.updatePost(postId, updates);
     return NextResponse.json({ success: true, post: updated });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '更新貼文失敗';
@@ -161,6 +163,7 @@ export async function PATCH(request: NextRequest) {
 // 刪除貼文
 export async function DELETE(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const user = await getCurrentUser();
     const { searchParams } = new URL(request.url);
     const postId = searchParams.get('postId');
@@ -179,7 +182,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '訪客無權限刪除貼文，如需處理請聯絡板主老師' }, { status: 403 });
     }
 
-    const board = db.getBoardById(post.boardId);
+    const board = await db.getBoardByIdAsync(post.boardId);
     const isAdmin = user.role === 'admin';
     const isBoardOwner = user.id === board?.createdBy;
     const isAuthor = user.id === post.authorId;
@@ -192,7 +195,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '權限不足：您只能刪除自己發表的貼文' }, { status: 403 });
     }
 
-    db.deletePost(postId);
+    await db.deletePost(postId);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : '刪除貼文失敗';

@@ -7,8 +7,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await db.ensureHydrated();
   const { id } = await params;
-  const sections = db.getSectionsByBoardId(id);
+  const sections = await db.getSectionsByBoardIdAsync(id);
   return NextResponse.json({ sections });
 }
 
@@ -17,10 +18,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await db.ensureHydrated();
     const { id } = await params;
     const user = await getCurrentUser();
 
-    const board = db.getBoardById(id);
+    const board = await db.getBoardByIdAsync(id);
     if (!board) {
       return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
     }
@@ -39,7 +41,7 @@ export async function POST(
       return NextResponse.json({ error: '請輸入主題名稱' }, { status: 400 });
     }
 
-    const existing = db.getSectionsByBoardId(id);
+    const existing = await db.getSectionsByBoardIdAsync(id);
     const newSection: Section = {
       id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       boardId: id,
@@ -48,7 +50,7 @@ export async function POST(
       createdAt: new Date().toISOString(),
     };
 
-    db.createSection(newSection);
+    await db.createSection(newSection);
     return NextResponse.json({ success: true, section: newSection });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '建立主題失敗';
@@ -61,9 +63,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await db.ensureHydrated();
     const { id } = await params;
     const user = await getCurrentUser();
-    const board = db.getBoardById(id);
+    const board = await db.getBoardByIdAsync(id);
 
     const isAdmin = user?.role === 'admin';
     const isBoardOwner = user?.id === board?.createdBy;
@@ -79,7 +82,7 @@ export async function PATCH(
       return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
     }
 
-    const updated = db.updateSection(sectionId, title);
+    const updated = await db.updateSection(sectionId, title);
     return NextResponse.json({ success: true, section: updated });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '更新主題失敗';
@@ -92,9 +95,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await db.ensureHydrated();
     const { id } = await params;
     const user = await getCurrentUser();
-    const board = db.getBoardById(id);
+    const board = await db.getBoardByIdAsync(id);
 
     const isAdmin = user?.role === 'admin';
     const isBoardOwner = user?.id === board?.createdBy;
@@ -111,12 +115,12 @@ export async function DELETE(
     }
 
     // 檢查是否只剩一個主題，避免全部刪空
-    const sections = db.getSectionsByBoardId(id);
+    const sections = await db.getSectionsByBoardIdAsync(id);
     if (sections.length <= 1) {
       return NextResponse.json({ error: '至少需要保留一個主題欄位' }, { status: 400 });
     }
 
-    db.deleteSection(sectionId);
+    await db.deleteSection(sectionId);
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : '刪除主題失敗';

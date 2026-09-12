@@ -14,6 +14,9 @@ import {
   deleteUserFromSupabase,
   syncCommentToSupabase,
   hydrateFromSupabase,
+  fetchBoardFromSupabase,
+  fetchSectionsFromSupabase,
+  fetchPostsFromSupabase,
 } from '@/lib/supabase/adapter';
 
 // 在 Serverless (Vercel) 環境中，只有 os.tmpdir() 具備讀寫權限
@@ -131,40 +134,47 @@ function writeJson<T>(file: string, data: T, key: keyof typeof memoryStore) {
 // Supabase 狀態水合管理
 // ==========================================
 let hydrationPromise: Promise<void> | null = null;
+let lastHydratedAt = 0;
+const HYDRATION_TTL_MS = 2000; // 2 秒快取效期，避免 serverless 暖機容器保留過期記憶體資料
 
-export async function ensureHydrated(): Promise<void> {
+export async function ensureHydrated(force = false): Promise<void> {
   if (!isSupabaseConfigured()) return;
-  if (!hydrationPromise) {
-    hydrationPromise = (async () => {
-      try {
-        const data = await hydrateFromSupabase();
-        if (data) {
-          if (data.boards && data.boards.length > 0) {
-            memoryStore.boards = data.boards;
-            writeJson(BOARDS_FILE, data.boards, 'boards');
-          }
-          if (data.sections && data.sections.length > 0) {
-            memoryStore.sections = data.sections;
-            writeJson(SECTIONS_FILE, data.sections, 'sections');
-          }
-          if (data.posts && data.posts.length > 0) {
-            memoryStore.posts = data.posts;
-            writeJson(POSTS_FILE, data.posts, 'posts');
-          }
-          if (data.users && data.users.length > 0) {
-            memoryStore.users = data.users;
-            writeJson(USERS_FILE, data.users, 'users');
-          }
-          if (data.comments && data.comments.length > 0) {
-            memoryStore.comments = data.comments;
-            writeJson(COMMENTS_FILE, data.comments, 'comments');
-          }
-        }
-      } catch (err) {
-        console.error('ensureHydrated failed:', err);
-      }
-    })();
+  const now = Date.now();
+  if (!force && hydrationPromise && now - lastHydratedAt < HYDRATION_TTL_MS) {
+    return hydrationPromise;
   }
+
+  hydrationPromise = (async () => {
+    try {
+      const data = await hydrateFromSupabase();
+      if (data) {
+        if (data.boards && data.boards.length > 0) {
+          memoryStore.boards = data.boards;
+          writeJson(BOARDS_FILE, data.boards, 'boards');
+        }
+        if (data.sections && data.sections.length > 0) {
+          memoryStore.sections = data.sections;
+          writeJson(SECTIONS_FILE, data.sections, 'sections');
+        }
+        if (data.posts && data.posts.length > 0) {
+          memoryStore.posts = data.posts;
+          writeJson(POSTS_FILE, data.posts, 'posts');
+        }
+        if (data.users && data.users.length > 0) {
+          memoryStore.users = data.users;
+          writeJson(USERS_FILE, data.users, 'users');
+        }
+        if (data.comments && data.comments.length > 0) {
+          memoryStore.comments = data.comments;
+          writeJson(COMMENTS_FILE, data.comments, 'comments');
+        }
+        lastHydratedAt = Date.now();
+      }
+    } catch (err) {
+      console.error('ensureHydrated failed:', err);
+    }
+  })();
+
   await hydrationPromise;
 }
 
@@ -301,16 +311,32 @@ export const db = {
     const boards = db.getBoards();
     return boards.find((b) => b.id === id);
   },
-  createBoard: (board: Board): Board => {
+  getBoardByIdAsync: async (id: string): Promise<Board | undefined> => {
+    let board = db.getBoardById(id);
+    if (!board && isSupabaseConfigured()) {
+      const remote = await fetchBoardFromSupabase(id);
+      if (remote) {
+        const boards = db.getBoards();
+        if (!boards.find((b) => b.id === remote.id)) {
+          boards.unshift(remote);
+          writeJson(BOARDS_FILE, boards, 'boards');
+        }
+        board = remote;
+      }
+    }
+    return board;
+  },
+  createBoard: async (board: Board): Promise<Board> => {
     const boards = db.getBoards();
     boards.unshift(board);
     writeJson(BOARDS_FILE, boards, 'boards');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncBoardToSupabase(board).catch(console.error);
+      await syncBoardToSupabase(board);
     }
 
     // 建立新看板時，自動為其產生一個預設主題欄位
-    db.createSection({
+    await db.createSection({
       id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       boardId: board.id,
       title: '主題討論區 📌',
@@ -320,24 +346,26 @@ export const db = {
 
     return board;
   },
-  updateBoard: (id: string, updates: Partial<Board>): Board | undefined => {
+  updateBoard: async (id: string, updates: Partial<Board>): Promise<Board | undefined> => {
     const boards = db.getBoards();
     const idx = boards.findIndex((b) => b.id === id);
     if (idx === -1) return undefined;
     boards[idx] = { ...boards[idx], ...updates, updatedAt: new Date().toISOString() };
     writeJson(BOARDS_FILE, boards, 'boards');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncBoardToSupabase(boards[idx]).catch(console.error);
+      await syncBoardToSupabase(boards[idx]);
     }
     return boards[idx];
   },
-  deleteBoard: (id: string): boolean => {
+  deleteBoard: async (id: string): Promise<boolean> => {
     const boards = db.getBoards();
     const filtered = boards.filter((b) => b.id !== id);
     if (filtered.length === boards.length) return false;
     writeJson(BOARDS_FILE, filtered, 'boards');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      deleteBoardFromSupabase(id).catch(console.error);
+      await deleteBoardFromSupabase(id);
     }
     return true;
   },
@@ -364,33 +392,53 @@ export const db = {
 
     return boardSections;
   },
-  createSection: (section: Section): Section => {
+  getSectionsByBoardIdAsync: async (boardId: string): Promise<Section[]> => {
+    let sections = db.getSectionsByBoardId(boardId);
+    if (sections.length === 0 && isSupabaseConfigured()) {
+      const remote = await fetchSectionsFromSupabase(boardId);
+      if (remote.length > 0) {
+        const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+        for (const s of remote) {
+          if (!allSections.find((x) => x.id === s.id)) {
+            allSections.push(s);
+          }
+        }
+        writeJson(SECTIONS_FILE, allSections, 'sections');
+        sections = remote;
+      }
+    }
+    return sections;
+  },
+  createSection: async (section: Section): Promise<Section> => {
     const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
     allSections.push(section);
     writeJson(SECTIONS_FILE, allSections, 'sections');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncSectionToSupabase(section).catch(console.error);
+      await syncSectionToSupabase(section);
     }
     return section;
   },
-  updateSection: (id: string, title: string): Section | undefined => {
+  updateSection: async (id: string, title: string): Promise<Section | undefined> => {
     const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
     const idx = allSections.findIndex((s) => s.id === id);
     if (idx === -1) return undefined;
     allSections[idx].title = title.trim();
     writeJson(SECTIONS_FILE, allSections, 'sections');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncSectionToSupabase(allSections[idx]).catch(console.error);
+      await syncSectionToSupabase(allSections[idx]);
     }
     return allSections[idx];
   },
-  deleteSection: (id: string): boolean => {
+  deleteSection: async (id: string): Promise<boolean> => {
     const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
     const filtered = allSections.filter((s) => s.id !== id);
     if (filtered.length === allSections.length) return false;
     writeJson(SECTIONS_FILE, filtered, 'sections');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      deleteSectionFromSupabase(id).catch(console.error);
+      await deleteSectionFromSupabase(id);
     }
     return true;
   },
@@ -402,37 +450,57 @@ export const db = {
       .filter((p) => p.boardId === boardId && (includePending || p.status === 'approved'))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
+  getPostsByBoardIdAsync: async (boardId: string, includePending = false): Promise<Post[]> => {
+    let posts = db.getPostsByBoardId(boardId, includePending);
+    if (posts.length === 0 && isSupabaseConfigured()) {
+      const remote = await fetchPostsFromSupabase(boardId);
+      if (remote.length > 0) {
+        const allPosts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
+        for (const p of remote) {
+          if (!allPosts.find((x) => x.id === p.id)) {
+            allPosts.push(p);
+          }
+        }
+        writeJson(POSTS_FILE, allPosts, 'posts');
+        posts = includePending ? remote : remote.filter((p) => p.status === 'approved');
+      }
+    }
+    return posts;
+  },
   getPostById: (id: string): Post | undefined => {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     return posts.find((p) => p.id === id);
   },
-  createPost: (post: Post): Post => {
+  createPost: async (post: Post): Promise<Post> => {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     posts.unshift(post);
     writeJson(POSTS_FILE, posts, 'posts');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncPostToSupabase(post).catch(console.error);
+      await syncPostToSupabase(post);
     }
     return post;
   },
-  updatePost: (id: string, updates: Partial<Post>): Post | undefined => {
+  updatePost: async (id: string, updates: Partial<Post>): Promise<Post | undefined> => {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     const idx = posts.findIndex((p) => p.id === id);
     if (idx === -1) return undefined;
     posts[idx] = { ...posts[idx], ...updates, updatedAt: new Date().toISOString() };
     writeJson(POSTS_FILE, posts, 'posts');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      syncPostToSupabase(posts[idx]).catch(console.error);
+      await syncPostToSupabase(posts[idx]);
     }
     return posts[idx];
   },
-  deletePost: (id: string): boolean => {
+  deletePost: async (id: string): Promise<boolean> => {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     const filtered = posts.filter((p) => p.id !== id);
     if (filtered.length === posts.length) return false;
     writeJson(POSTS_FILE, filtered, 'posts');
+    lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
-      deletePostFromSupabase(id).catch(console.error);
+      await deletePostFromSupabase(id);
     }
     return true;
   },

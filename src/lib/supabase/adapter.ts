@@ -300,3 +300,53 @@ export async function hydrateFromSupabase(): Promise<{
     return null;
   }
 }
+
+// 直連 Supabase 查詢特定看板（防止 Serverless 記憶體未即時同步而回傳 404）
+export async function fetchBoardFromSupabase(id: string): Promise<Board | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.from('boards').select('*').eq('id', id).maybeSingle();
+    if (error || !data) return null;
+    return rowToBoard(data);
+  } catch (err) {
+    console.error('fetchBoardFromSupabase error:', err);
+    return null;
+  }
+}
+
+// 直連 Supabase 查詢看板主題分欄
+export async function fetchSectionsFromSupabase(boardId: string): Promise<Section[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('sections')
+      .select('*')
+      .eq('board_id', boardId)
+      .order('order_index', { ascending: true });
+    if (error || !data) return [];
+    return data.map(rowToSection);
+  } catch (err) {
+    console.error('fetchSectionsFromSupabase error:', err);
+    return [];
+  }
+}
+
+// 直連 Supabase 查詢看板便籤貼文
+export async function fetchPostsFromSupabase(boardId: string): Promise<Post[]> {
+  const supabase = getSupabase();
+  if (!supabase) return [];
+  try {
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('board_id', boardId)
+      .order('created_at', { ascending: false });
+    if (error || !data) return [];
+    return data.map(rowToPost);
+  } catch (err) {
+    console.error('fetchPostsFromSupabase error:', err);
+    return [];
+  }
+}

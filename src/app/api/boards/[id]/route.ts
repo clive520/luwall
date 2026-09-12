@@ -8,7 +8,7 @@ export async function GET(
 ) {
   await db.ensureHydrated();
   const { id } = await params;
-  const board = db.getBoardById(id);
+  const board = await db.getBoardByIdAsync(id);
 
   if (!board) {
     return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
@@ -45,8 +45,8 @@ export async function GET(
     );
   }
 
-  const posts = db.getPostsByBoardId(id, canManage);
-  const sections = db.getSectionsByBoardId(id);
+  const posts = await db.getPostsByBoardIdAsync(id, canManage);
+  const sections = await db.getSectionsByBoardIdAsync(id);
 
   return NextResponse.json({
     board,
@@ -61,10 +61,11 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await db.ensureHydrated();
   const { id } = await params;
   const user = await getCurrentUser();
 
-  const board = db.getBoardById(id);
+  const board = await db.getBoardByIdAsync(id);
   if (!board) {
     return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
   }
@@ -78,7 +79,7 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const updated = db.updateBoard(id, body);
+  const updated = await db.updateBoard(id, body);
 
   return NextResponse.json({ success: true, board: updated });
 }
@@ -87,10 +88,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await db.ensureHydrated();
   const { id } = await params;
   const user = await getCurrentUser();
 
-  const board = db.getBoardById(id);
+  const board = await db.getBoardByIdAsync(id);
   if (!board) {
     return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
   }
@@ -104,6 +106,6 @@ export async function DELETE(
     return NextResponse.json({ error: '權限不足：無法刪除此看板' }, { status: 403 });
   }
 
-  db.deleteBoard(id);
+  await db.deleteBoard(id);
   return NextResponse.json({ success: true });
 }

@@ -37,6 +37,11 @@ function BoardCard({ board, isMyBoard }: { board: Board; isMyBoard?: boolean }) 
                 我的看板
               </span>
             )}
+            {!board.isPublic && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-900/60 text-white backdrop-blur flex items-center gap-1 shadow-xs">
+                🔒 校內限定
+              </span>
+            )}
           </div>
           <span className="inline-flex items-center gap-1 text-[10px] text-white/90">
             <Radio className="w-3 h-3 text-emerald-300 animate-pulse" />
@@ -102,8 +107,16 @@ export default function HomePage() {
       .then((data) => setBoards(data.boards || []));
   };
 
-  const myBoards = currentUser ? boards.filter((b) => b.createdBy === currentUser.id) : [];
-  const popularBoards = boards;
+  const isBoardMine = (b: Board) => {
+    if (!currentUser) return false;
+    return (
+      b.createdBy === currentUser.id ||
+      (Boolean(currentUser.name) && b.creatorName === currentUser.name)
+    );
+  };
+
+  const myBoards = currentUser ? boards.filter(isBoardMine) : [];
+  const popularBoards = currentUser ? boards : boards.filter((b) => b.isPublic !== false);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/50 via-white to-amber-50/30 flex flex-col">
@@ -276,7 +289,7 @@ export default function HomePage() {
               <BoardCard
                 key={b.id}
                 board={b}
-                isMyBoard={currentUser ? currentUser.id === b.createdBy : false}
+                isMyBoard={isBoardMine(b)}
               />
             ))}
           </div>
