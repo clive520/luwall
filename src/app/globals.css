@@ -63,24 +63,68 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* 徹底強化全域輸入框文字清晰度 */
-input, textarea, select {
-  color: #030712 !important; /* 確保輸入文字絕對深黑 */
+/* ==========================================================
+   徹底修復所有主題模式下的輸入框（Input/Textarea/Select）對比度
+   ========================================================== */
+
+/* 1. 預設所有白色/淺色輸入框：無論在白天、黑夜、深海等任何主題下，文字一律維持高對比深黑色 */
+input,
+textarea,
+select {
+  color: #09090b !important;
+  -webkit-text-fill-color: #09090b !important;
   font-weight: 600 !important;
+  caret-color: #ea580c !important;
 }
 
-[data-theme="night"] input,
-[data-theme="night"] textarea,
-[data-theme="night"] select,
-[data-theme="ocean"] input,
-[data-theme="ocean"] textarea,
-[data-theme="ocean"] select {
-  color: #ffffff !important; /* 深色模式下確保字體高亮純白 */
+/* 2. 針對所有明確標記 bg-white 或卡片內的輸入框，強制背景純白、文字深黑 */
+input.bg-white,
+textarea.bg-white,
+select.bg-white,
+.bg-white input,
+.bg-white textarea,
+.bg-white select {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+  -webkit-text-fill-color: #09090b !important;
 }
 
-/* 清晰 placeholder */
+/* 3. 清楚可讀的 placeholder 提示文字 (深色文字對比度，不會過淡看不清) */
+input::placeholder,
+textarea::placeholder,
 ::placeholder {
-  color: #6b7280 !important;
-  opacity: 0.85 !important;
+  color: #64748b !important;
+  -webkit-text-fill-color: #64748b !important;
+  opacity: 1 !important;
   font-weight: 500 !important;
 }
+
+/* 4. 若輸入框特別指定了深色背景（如 dark:bg-slate-800 等），文字才轉為高亮白色 */
+input[class*="bg-slate-8"],
+input[class*="bg-slate-9"],
+input[class*="bg-gray-8"],
+input[class*="bg-gray-9"],
+input[class*="bg-zinc-8"],
+input[class*="bg-zinc-9"],
+textarea[class*="bg-slate-8"],
+textarea[class*="bg-slate-9"],
+textarea[class*="bg-gray-8"],
+textarea[class*="bg-gray-9"],
+textarea[class*="bg-zinc-8"],
+textarea[class*="bg-zinc-9"] {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f59e0b !important;
+}
+
+input[class*="bg-slate-8"]::placeholder,
+input[class*="bg-slate-9"]::placeholder,
+input[class*="bg-gray-8"]::placeholder,
+input[class*="bg-gray-9"]::placeholder,
+textarea[class*="bg-slate-8"]::placeholder,
+textarea[class*="bg-slate-9"]::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
