@@ -95,6 +95,36 @@ export function CreatePostModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // 解析內文中額外偵測到的連結縮圖 (例如第二個連結) - 必須在所有條件式 return 之前以符合 React Hook 規則
+  const extraLinksFromContent = useMemo(() => {
+    if (!isOpen) return [];
+    const urls = findUrls(content);
+    const list: MediaAttachment[] = [];
+    const seen = new Set<string>();
+    if (attachment && attachment.type === 'link' && attachment.url) {
+      seen.add(attachment.url.trim().toLowerCase());
+    }
+    for (const u of urls) {
+      const norm = u.trim().toLowerCase();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        const ytId = extractYouTubeId(u);
+        list.push({
+          type: 'link',
+          url: u,
+          title: ytId ? 'YouTube 影片' : u,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        });
+      }
+    }
+    return list;
+  }, [isOpen, content, attachment]);
+
   if (!isOpen) return null;
 
   // 上傳圖片處理核心邏輯 (支援拖曳、剪貼簿與檔案選擇)
@@ -263,35 +293,6 @@ export function CreatePostModal({
     });
     setMediaType('audio');
   };
-
-  // 解析內文中額外偵測到的連結縮圖 (例如第二個連結)
-  const extraLinksFromContent = useMemo(() => {
-    const urls = findUrls(content);
-    const list: MediaAttachment[] = [];
-    const seen = new Set<string>();
-    if (attachment && attachment.type === 'link' && attachment.url) {
-      seen.add(attachment.url.trim().toLowerCase());
-    }
-    for (const u of urls) {
-      const norm = u.trim().toLowerCase();
-      if (!seen.has(norm)) {
-        seen.add(norm);
-        const ytId = extractYouTubeId(u);
-        list.push({
-          type: 'link',
-          url: u,
-          title: ytId ? 'YouTube 影片' : u,
-          metadata: ytId
-            ? {
-                youtubeId: ytId,
-                ogImage: getYouTubeThumbnail(ytId),
-              }
-            : undefined,
-        });
-      }
-    }
-    return list;
-  }, [content, attachment]);
 
   // 送出貼文
   const handleSubmit = async (e: React.FormEvent) => {

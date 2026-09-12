@@ -102,6 +102,7 @@ export function ShelfView({
     }
   };
 
+  const isOwnerOrAdmin = isOwner || currentUser?.role === 'admin';
   const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
   const pendingCount = posts.filter((p) => p.status === 'pending').length;
 
@@ -272,8 +273,8 @@ export function ShelfView({
                     </div>
                   )}
 
-                  {/* 教師管理選單 (重命名/刪除) */}
-                  {isTeacher && editingSectionId !== section.id && (
+                  {/* 看板擁有者管理選單 (重命名/刪除) */}
+                  {isOwnerOrAdmin && editingSectionId !== section.id && (
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => {
@@ -336,8 +337,8 @@ export function ShelfView({
           );
         })}
 
-        {/* 最右側：新增主題分類欄位（教師/管理員可見） */}
-        {isTeacher ? (
+        {/* 最右側：新增主題分類欄位（僅看板擁有者/管理員可見） */}
+        {isOwnerOrAdmin ? (
           <div className="w-76 sm:w-84 shrink-0 sticky top-2">
             {!isAddingSection ? (
               <button

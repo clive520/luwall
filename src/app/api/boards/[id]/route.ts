@@ -16,11 +16,13 @@ export async function GET(
 
   const user = await getCurrentUser();
   const isAdmin = user?.role === 'admin';
-  const isBoardOwner = user?.id === board.createdBy;
+  const isBoardOwner = Boolean(user && user.id === board.createdBy);
   const isTeacher = user?.role === 'teacher';
 
-  // 老師或管理員可審核與管理
-  const canManage = isAdmin || isBoardOwner || isTeacher;
+  // 審核權限：看板擁有者、教師或管理員可審核貼文
+  const canReview = isAdmin || isBoardOwner || isTeacher;
+  // 看板擁有權：嚴格限定為開設此看板的人 (或系統管理員)
+  const isOwner = isBoardOwner || isAdmin;
 
   // 若為私人看板且未登入，限制瀏覽
   if (board.isPublic === false && !user) {
@@ -39,20 +41,22 @@ export async function GET(
         sections: [],
         posts: [],
         isOwner: false,
+        canReview: false,
         currentUser: null,
       },
       { status: 403 }
     );
   }
 
-  const posts = await db.getPostsByBoardIdAsync(id, canManage);
+  const posts = await db.getPostsByBoardIdAsync(id, canReview);
   const sections = await db.getSectionsByBoardIdAsync(id);
 
   return NextResponse.json({
     board,
     sections,
     posts,
-    isOwner: canManage,
+    isOwner,
+    canReview,
     currentUser: user,
   });
 }
@@ -71,11 +75,11 @@ export async function PATCH(
   }
 
   const isAdmin = user?.role === 'admin';
-  const isBoardOwner = user?.id === board.createdBy;
-  const isTeacher = user?.role === 'teacher';
+  const isBoardOwner = Boolean(user && user.id === board.createdBy);
 
-  if (!isAdmin && !isBoardOwner && !isTeacher) {
-    return NextResponse.json({ error: '權限不足：僅教師或系統管理員可修改設定' }, { status: 403 });
+  // 僅該看板的開設者或超級管理員具備修改設定權限
+  if (!isAdmin && !isBoardOwner) {
+    return NextResponse.json({ error: '權限不足：僅該看板擁有者或系統管理員可修改設定' }, { status: 403 });
   }
 
   const body = await request.json();
@@ -98,12 +102,11 @@ export async function DELETE(
   }
 
   const isAdmin = user?.role === 'admin';
-  const isBoardOwner = user?.id === board.createdBy;
-  const isTeacher = user?.role === 'teacher';
+  const isBoardOwner = Boolean(user && user.id === board.createdBy);
 
-  // 系統管理員或教師可刪除看板
-  if (!isAdmin && !isBoardOwner && !isTeacher) {
-    return NextResponse.json({ error: '權限不足：無法刪除此看板' }, { status: 403 });
+  // 僅該看板的開設者或超級管理員具備刪除權限
+  if (!isAdmin && !isBoardOwner) {
+    return NextResponse.json({ error: '權限不足：僅該看板擁有者或系統管理員可刪除此看板' }, { status: 403 });
   }
 
   await db.deleteBoard(id);

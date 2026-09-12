@@ -77,6 +77,36 @@ export function EditPostModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // 解析內文中額外偵測到的連結縮圖 (例如第二個連結) - 必須在條件式 return 之前調用
+  const extraLinksFromContent = useMemo(() => {
+    if (!isOpen) return [];
+    const urls = findUrls(content);
+    const list: MediaAttachment[] = [];
+    const seen = new Set<string>();
+    if (attachment && attachment.type === 'link' && attachment.url) {
+      seen.add(attachment.url.trim().toLowerCase());
+    }
+    for (const u of urls) {
+      const norm = u.trim().toLowerCase();
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        const ytId = extractYouTubeId(u);
+        list.push({
+          type: 'link',
+          url: u,
+          title: ytId ? 'YouTube 影片' : u,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        });
+      }
+    }
+    return list;
+  }, [isOpen, content, attachment]);
+
   if (!isOpen) return null;
 
   // 統一檔案上傳邏輯 (支援拖曳與按鈕選擇)
@@ -246,35 +276,6 @@ export function EditPostModal({
     });
     setMediaType('audio');
   };
-
-  // 解析內文中額外偵測到的連結縮圖 (例如第二個連結)
-  const extraLinksFromContent = useMemo(() => {
-    const urls = findUrls(content);
-    const list: MediaAttachment[] = [];
-    const seen = new Set<string>();
-    if (attachment && attachment.type === 'link' && attachment.url) {
-      seen.add(attachment.url.trim().toLowerCase());
-    }
-    for (const u of urls) {
-      const norm = u.trim().toLowerCase();
-      if (!seen.has(norm)) {
-        seen.add(norm);
-        const ytId = extractYouTubeId(u);
-        list.push({
-          type: 'link',
-          url: u,
-          title: ytId ? 'YouTube 影片' : u,
-          metadata: ytId
-            ? {
-                youtubeId: ytId,
-                ogImage: getYouTubeThumbnail(ytId),
-              }
-            : undefined,
-        });
-      }
-    }
-    return list;
-  }, [content, attachment]);
 
   // 送出更新
   const handleSubmit = async (e: React.FormEvent) => {

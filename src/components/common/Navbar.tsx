@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { User } from '@/types';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { ApplyTeacherModal } from './ApplyTeacherModal';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell } from 'lucide-react';
 
 interface NavbarProps {
@@ -41,10 +42,17 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
   }, []);
 
   const handleLogout = async () => {
+    try {
+      const supabase = getBrowserSupabase();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch {
+      // 忽略
+    }
     await fetch('/api/auth/logout', { method: 'POST' });
     setUser(null);
-    router.push('/');
-    router.refresh();
+    window.location.href = '/';
   };
 
   const handleCreateBoardClick = () => {

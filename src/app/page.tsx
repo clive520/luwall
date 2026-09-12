@@ -109,10 +109,8 @@ export default function HomePage() {
 
   const isBoardMine = (b: Board) => {
     if (!currentUser) return false;
-    return (
-      b.createdBy === currentUser.id ||
-      (Boolean(currentUser.name) && b.creatorName === currentUser.name)
-    );
+    // 嚴格依據開板者唯一 ID 判定擁有權，絕不可單憑姓名比對（避免同名使用者誤判）
+    return b.createdBy === currentUser.id;
   };
 
   const myBoards = currentUser ? boards.filter(isBoardMine) : [];

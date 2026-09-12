@@ -327,8 +327,8 @@ export default function BoardPage({
                 <span>投影 QR Code 📱</span>
               </button>
 
-              {/* 教師 / 管理員專屬：看板設定按鈕 */}
-              {isTeacherOrAdmin && (
+              {/* 看板開立者 / 管理員專屬：看板設定按鈕 */}
+              {isOwner && (
                 <button
                   onClick={() => setIsSettingsOpen(true)}
                   className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
