@@ -41,14 +41,14 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { userId, role } = body as { userId: string; role: UserRole };
+    const { userId, role, action } = body as {
+      userId: string;
+      role?: UserRole;
+      action?: 'approve_application' | 'reject_application';
+    };
 
-    if (!userId || !role) {
-      return NextResponse.json({ error: '缺少參數' }, { status: 400 });
-    }
-
-    if (!['admin', 'teacher', 'student'].includes(role)) {
-      return NextResponse.json({ error: '無效的身分角色' }, { status: 400 });
+    if (!userId) {
+      return NextResponse.json({ error: '缺少使用者 ID' }, { status: 400 });
     }
 
     const targetUser = db.getUserById(userId);
@@ -59,6 +59,19 @@ export async function PATCH(request: NextRequest) {
     // 1. 自己不能核定自己的身分
     if (targetUser.id === operator.id) {
       return NextResponse.json({ error: '安全限制：自己不能核定或變更自己的身分' }, { status: 403 });
+    }
+
+    // 處理教師申請審核 (approve / reject)
+    if (action === 'approve_application') {
+      const updated = db.reviewTeacherApplication(userId, 'approve');
+      return NextResponse.json({ success: true, user: updated });
+    } else if (action === 'reject_application') {
+      const updated = db.reviewTeacherApplication(userId, 'reject');
+      return NextResponse.json({ success: true, user: updated });
+    }
+
+    if (!role || !['admin', 'teacher', 'student'].includes(role)) {
+      return NextResponse.json({ error: '無效的身分角色' }, { status: 400 });
     }
 
     // 2. 老師的權限規則：

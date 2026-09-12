@@ -2,6 +2,8 @@ export type UserRole = 'admin' | 'teacher' | 'student' | 'guest';
 
 export type AuthProvider = 'luyang_sso' | 'google' | 'local';
 
+export type TeacherApplicationStatus = 'none' | 'pending' | 'rejected' | 'approved';
+
 export interface User {
   id: string; // SSO UID, Google sub, 或自建 UUID
   provider: AuthProvider;
@@ -10,6 +12,9 @@ export interface User {
   role: UserRole;
   email?: string;
   avatarUrl?: string;
+  teacherApplicationStatus?: TeacherApplicationStatus;
+  teacherApplicationReason?: string;
+  teacherAppliedAt?: string;
   createdAt: string;
 }
 

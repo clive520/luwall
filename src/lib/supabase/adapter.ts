@@ -127,6 +127,9 @@ export function userToRow(u: User & { passwordHash?: string }) {
     email: u.email || null,
     avatar_url: u.avatarUrl || null,
     password_hash: u.passwordHash || null,
+    teacher_application_status: u.teacherApplicationStatus || 'none',
+    teacher_application_reason: u.teacherApplicationReason || null,
+    teacher_applied_at: u.teacherAppliedAt || null,
     created_at: u.createdAt,
   };
 }
@@ -141,6 +144,9 @@ export function rowToUser(r: any): User & { passwordHash?: string } {
     email: r.email,
     avatarUrl: r.avatar_url,
     passwordHash: r.password_hash,
+    teacherApplicationStatus: r.teacher_application_status || 'none',
+    teacherApplicationReason: r.teacher_application_reason,
+    teacherAppliedAt: r.teacher_applied_at,
     createdAt: r.created_at,
   };
 }

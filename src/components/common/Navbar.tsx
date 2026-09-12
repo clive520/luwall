@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User } from '@/types';
 import { ThemeSwitcher } from './ThemeSwitcher';
-import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase } from 'lucide-react';
+import { ApplyTeacherModal } from './ApplyTeacherModal';
+import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell } from 'lucide-react';
 
 interface NavbarProps {
   onOpenCreateBoard?: () => void;
@@ -15,12 +16,26 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then((res) => res.json())
       .then((data) => {
-        setUser(data.user || null);
+        const u = data.user || null;
+        setUser(u);
+        if (u && (u.role === 'admin' || u.role === 'teacher')) {
+          fetch('/api/admin/users')
+            .then((r) => r.json())
+            .then((userData) => {
+              if (userData.users) {
+                const pending = userData.users.filter((item: User) => item.teacherApplicationStatus === 'pending');
+                setPendingReviewCount(pending.length);
+              }
+            })
+            .catch(() => {});
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -77,7 +92,7 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           {!loading && (user?.role === 'admin' || user?.role === 'teacher') && (
             <Link
               href="/admin"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition shadow-xs relative"
               title={user.role === 'admin' ? '系統與成員後台' : '成員身分核定與管理'}
             >
               {user.role === 'admin' ? (
@@ -88,7 +103,42 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
               <span className="hidden sm:inline">
                 {user.role === 'admin' ? '系統後台' : '身分管理'}
               </span>
+              {pendingReviewCount > 0 && (
+                <span
+                  title={`${pendingReviewCount} 件教師資格申請待審核`}
+                  className="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-black bg-red-500 text-white rounded-full leading-none animate-pulse shadow-xs"
+                >
+                  {pendingReviewCount}
+                </span>
+              )}
             </Link>
+          )}
+
+          {/* 學生申請成為教師按鈕 */}
+          {!loading && user?.role === 'student' && (
+            <button
+              onClick={() => setApplyModalOpen(true)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition shadow-xs ${
+                user.teacherApplicationStatus === 'pending'
+                  ? 'bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200'
+                  : user.teacherApplicationStatus === 'rejected'
+                  ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+                  : 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white'
+              }`}
+              title="申請晉升為教師身分"
+            >
+              {user.teacherApplicationStatus === 'pending' ? (
+                <>
+                  <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                  <span>資格審核中</span>
+                </>
+              ) : (
+                <>
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>{user.teacherApplicationStatus === 'rejected' ? '重新申請教師' : '申請為老師'}</span>
+                </>
+              )}
+            </button>
           )}
 
           {/* 新看板按鈕：僅教師與系統管理員可見，訪客與學生不可見 */}
@@ -153,6 +203,17 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           ) : null}
         </div>
       </div>
+
+      {user && (
+        <ApplyTeacherModal
+          isOpen={applyModalOpen}
+          onClose={() => setApplyModalOpen(false)}
+          currentUser={user}
+          onApplicationUpdated={(updatedUser) => {
+            setUser(updatedUser);
+          }}
+        />
+      )}
     </header>
   );
 }

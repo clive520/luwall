@@ -485,6 +485,39 @@ export const db = {
     const idx = users.findIndex((u) => u.id === userId);
     if (idx === -1) return undefined;
     users[idx].role = role;
+    if (role === 'teacher') {
+      users[idx].teacherApplicationStatus = 'approved';
+    }
+    writeJson(USERS_FILE, users, 'users');
+    if (isSupabaseConfigured()) {
+      syncUserToSupabase(users[idx]).catch(console.error);
+    }
+    return users[idx];
+  },
+  applyTeacherRole: (userId: string, reason?: string): User | undefined => {
+    const users = db.getUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) return undefined;
+    users[idx].teacherApplicationStatus = 'pending';
+    users[idx].teacherApplicationReason = reason || '';
+    users[idx].teacherAppliedAt = new Date().toISOString();
+    writeJson(USERS_FILE, users, 'users');
+    if (isSupabaseConfigured()) {
+      syncUserToSupabase(users[idx]).catch(console.error);
+    }
+    return users[idx];
+  },
+  reviewTeacherApplication: (userId: string, action: 'approve' | 'reject'): User | undefined => {
+    const users = db.getUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) return undefined;
+    if (action === 'approve') {
+      users[idx].role = 'teacher';
+      users[idx].teacherApplicationStatus = 'approved';
+    } else {
+      users[idx].role = 'student';
+      users[idx].teacherApplicationStatus = 'rejected';
+    }
     writeJson(USERS_FILE, users, 'users');
     if (isSupabaseConfigured()) {
       syncUserToSupabase(users[idx]).catch(console.error);

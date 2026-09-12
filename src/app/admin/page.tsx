@@ -16,6 +16,10 @@ import {
   Crown,
   GraduationCap,
   Briefcase,
+  Bell,
+  Clock,
+  Check,
+  X,
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -60,6 +64,36 @@ export default function AdminPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // 審核教師資格申請（核准或退回）
+  const handleReviewApplication = async (userId: string, action: 'approve_application' | 'reject_application') => {
+    setUpdatingId(userId);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '審核操作失敗');
+      }
+
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, ...data.user } : u))
+      );
+      setMessage({
+        type: 'success',
+        text: action === 'approve_application' ? '已成功核准並將該成員核定為教師身分！' : '已退回該申請，保留學生身分。',
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '操作失敗';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   // 變更使用者身分
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -193,6 +227,94 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* 待審核教師身分申請通知區（有待處理申請時高亮置頂） */}
+        {(() => {
+          const pendingUsers = users.filter((u) => u.teacherApplicationStatus === 'pending');
+          if (pendingUsers.length === 0) return null;
+
+          return (
+            <section className="mb-8 bg-gradient-to-r from-amber-500/10 via-amber-100 to-amber-50 border-2 border-amber-400 rounded-3xl p-6 shadow-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md animate-bounce">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold text-amber-950 flex items-center gap-2">
+                    <span>待審核教師身分申請</span>
+                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-black animate-pulse">
+                      {pendingUsers.length} 件待處理
+                    </span>
+                  </h2>
+                  <p className="text-xs text-amber-900/80 mt-0.5">
+                    以下學生已送出教師資格申請，您可以直接將其核定為教師，或退回申請保留學生身分。
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingUsers.map((applicant) => (
+                  <div
+                    key={applicant.id}
+                    className="bg-white p-4 rounded-2xl border border-amber-300 shadow-xs flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                          <span>{applicant.name}</span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold">
+                            學生
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-x-2">
+                        <span>帳號: {applicant.username}</span>
+                        {applicant.email && <span className="text-gray-400">({applicant.email})</span>}
+                      </div>
+
+                      {applicant.teacherApplicationReason && (
+                        <div className="mt-2.5 text-xs bg-amber-50 text-amber-900 p-2.5 rounded-xl border border-amber-200 leading-relaxed">
+                          <span className="font-bold">申請說明：</span>
+                          {applicant.teacherApplicationReason}
+                        </div>
+                      )}
+
+                      {applicant.teacherAppliedAt && (
+                        <div className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>申請時間：{new Date(applicant.teacherAppliedAt).toLocaleString('zh-TW')}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                      <button
+                        onClick={() => handleReviewApplication(applicant.id, 'approve_application')}
+                        disabled={updatingId === applicant.id}
+                        className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
+                      >
+                        {updatingId === applicant.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        <span>核定為教師</span>
+                      </button>
+                      <button
+                        onClick={() => handleReviewApplication(applicant.id, 'reject_application')}
+                        disabled={updatingId === applicant.id}
+                        className="flex-1 py-2 px-3 bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-300 hover:border-red-200 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>退回申請（保留學生）</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })()}
+
         {/* 第一大區：使用者身分核定與名冊 */}
         <section className="bg-white rounded-3xl p-6 shadow-xs border border-gray-200/80 mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -254,14 +376,27 @@ export default function AdminPage() {
                         </span>
                       ) : u.role === 'teacher' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 font-bold text-xs">
-                          <Briefcase className="w-3 h-3 text-emerald-600" />
+                          <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
                           教師
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 font-bold text-xs">
-                          <GraduationCap className="w-3 h-3 text-blue-600" />
-                          學生
-                        </span>
+                        <div className="flex flex-col gap-1 items-start">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 font-bold text-xs">
+                            <GraduationCap className="w-3 h-3 text-blue-600" />
+                            學生
+                          </span>
+                          {u.teacherApplicationStatus === 'pending' && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-extrabold text-[10px] animate-pulse">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              申請為老師中
+                            </span>
+                          )}
+                          {u.teacherApplicationStatus === 'rejected' && (
+                            <span className="text-[10px] text-gray-400">
+                              (申請已退回)
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="py-3.5 px-3">
@@ -270,6 +405,28 @@ export default function AdminPage() {
                         <span className="text-xs text-gray-400 font-medium italic">
                           本人（無法變更自己的身分）
                         </span>
+                      ) : u.teacherApplicationStatus === 'pending' ? (
+                        /* 待審核教師申請快速操作按鈕 */
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <button
+                            disabled={updatingId === u.id}
+                            onClick={() => handleReviewApplication(u.id, 'approve_application')}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1 disabled:opacity-50"
+                            title="核定該學生升格為教師"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>核定為老師</span>
+                          </button>
+                          <button
+                            disabled={updatingId === u.id}
+                            onClick={() => handleReviewApplication(u.id, 'reject_application')}
+                            className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-700 border border-gray-300 hover:border-red-200 transition flex items-center gap-1 disabled:opacity-50"
+                            title="退回申請，保留學生身分"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>退回申請</span>
+                          </button>
+                        </div>
                       ) : !isAdmin && u.role === 'admin' ? (
                         /* 2. 老師不能夠核定系統管理人員的身分 */
                         <span className="text-xs text-gray-400 font-medium">
