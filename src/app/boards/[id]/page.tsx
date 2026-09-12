@@ -141,7 +141,7 @@ export default function BoardPage({
             </div>
             <h3 className="text-lg font-black text-gray-900 mb-2">校內專屬私人看板</h3>
             <p className="text-xs text-gray-600 mb-6 leading-relaxed">
-              此看板已被設定為校內專屬，未登入者無法瀏覽內容。請先登入鹿陽國小 SSO 或一般帳號後檢視！
+              此看板已被設定為校內專屬，未登入者無法瀏覽內容。請先登入帳號後檢視！
             </p>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
               <Link

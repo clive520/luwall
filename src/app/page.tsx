@@ -7,7 +7,7 @@ import { Navbar } from '@/components/common/Navbar';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
 import {
   Plus,
-  School,
+  LogIn,
   Sparkles,
   ArrowRight,
   Radio,
@@ -77,50 +77,13 @@ export default function HomePage() {
                 href="/login"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-sm border border-amber-200 shadow-xs transition"
               >
-                <School className="w-4 h-4 text-emerald-600" />
-                <span>鹿陽國小 SSO 認證入口</span>
+                <LogIn className="w-4 h-4 text-amber-600" />
+                <span>登入參與 🪪</span>
               </Link>
             )}
           </div>
         </div>
       </section>
-
-      {/* 鹿陽國小 SSO 橫幅（若尚未登入） */}
-      {!currentUser && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-4 mb-8 w-full">
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-700 to-emerald-800 rounded-3xl p-5 sm:p-6 text-white shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-2xl shrink-0">
-                🏫
-              </div>
-              <div>
-                <h3 className="font-extrabold text-base mb-0.5">
-                  鹿陽國小師生專屬單一登入 (SSO)
-                </h3>
-                <p className="text-xs text-emerald-100">
-                  登入自動同步學生姓名、座號與班級名冊，作業發表紀錄不遺失！
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <a
-                href="/api/auth/sso"
-                className="flex-1 md:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-emerald-50 text-emerald-900 font-black text-xs shadow-xs transition"
-              >
-                <span>立即登入</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="/api/auth/sso?mode=mock-teacher"
-                className="inline-flex items-center justify-center px-3 py-2 rounded-xl bg-emerald-500/30 hover:bg-emerald-500/50 text-white text-xs font-semibold backdrop-blur transition"
-              >
-                一鍵模擬教師
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* 看板大廳區塊 */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
