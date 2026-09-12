@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Board, User, MediaAttachment, Section } from '@/types';
+import { Board, User, MediaAttachment, Section, Post } from '@/types';
 import { AudioRecorder } from '@/components/media/AudioRecorder';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
@@ -28,7 +28,7 @@ interface CreatePostModalProps {
   currentUser: User | null;
   isOpen: boolean;
   onClose: () => void;
-  onPostCreated: () => void;
+  onPostCreated: (createdPost?: Post) => void;
 }
 
 const PASTEL_COLORS = [
@@ -357,6 +357,20 @@ export function CreatePostModal({
         throw new Error(data.error || '發布失敗');
       }
 
+      // 若為未登入訪客且便籤需要審核，將 ID 記在本機 localStorage 以免重新載入後遺失
+      if (!currentUser && data.post?.id && data.post.status === 'pending') {
+        try {
+          const key = 'luwall_guest_pending_posts';
+          const saved = JSON.parse(localStorage.getItem(key) || '[]');
+          if (!saved.includes(data.post.id)) {
+            saved.push(data.post.id);
+            localStorage.setItem(key, JSON.stringify(saved));
+          }
+        } catch {
+          // 忽略
+        }
+      }
+
       // 重設表單狀態
       setTitle('');
       setContent('');
@@ -365,7 +379,7 @@ export function CreatePostModal({
       setMediaType('none');
       setError(null);
 
-      onPostCreated();
+      onPostCreated(data.post);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '發布失敗';

@@ -186,6 +186,14 @@ export function ShelfView({
         </div>
       )}
 
+      {/* 學生視角：若有待審核的便籤，提示正在等待老師同意 */}
+      {!isTeacher && pendingCount > 0 && (
+        <div className="max-w-7xl mx-auto mb-6 p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 flex items-center gap-2.5 text-xs font-bold text-amber-900 dark:text-amber-200 shadow-xs">
+          <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+          <span>您有 {pendingCount} 則發布的便籤正在「等待老師同意中」，審核通過後即會公開展示！</span>
+        </div>
+      )}
+
       {/* 橫向可滑動主題欄位容器 */}
       <div className="flex flex-row items-start gap-6 overflow-x-auto pb-16 pt-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
         {sections.map((section) => {

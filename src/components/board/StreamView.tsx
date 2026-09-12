@@ -81,6 +81,14 @@ export function StreamView({
         </div>
       )}
 
+      {/* 學生視角：若有待審核的便籤，提示正在等待老師同意 */}
+      {!isTeacher && pendingCount > 0 && (
+        <div className="mb-6 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-xs">
+          <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+          <span>您有 {pendingCount} 則發布的便籤正在「等待老師同意中」，審核通過後即會公開展示！</span>
+        </div>
+      )}
+
       {/* 貼文串流列表 */}
       {displayedPosts.length === 0 ? (
         <div className="text-center py-16 bg-white/60 rounded-3xl border border-dashed border-gray-300">

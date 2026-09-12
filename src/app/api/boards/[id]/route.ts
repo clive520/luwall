@@ -48,7 +48,12 @@ export async function GET(
     );
   }
 
-  const posts = await db.getPostsByBoardIdAsync(id, canReview);
+  // 支援訪客暫存貼文 ID (讓未登入訪客也能在審核中看見自己發布的便籤)
+  const guestPostsParam = request.nextUrl.searchParams.get('guestPosts');
+  const guestPostIds = guestPostsParam ? guestPostsParam.split(',').filter(Boolean) : [];
+
+  // 教師/管理員可見所有貼文（含待審核）；學生可見已核准貼文 + 自己的待審核便籤
+  const posts = await db.getPostsByBoardIdAsync(id, canReview, user?.id, guestPostIds);
   const sections = await db.getSectionsByBoardIdAsync(id);
 
   return NextResponse.json({

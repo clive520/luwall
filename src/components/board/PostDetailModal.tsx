@@ -318,9 +318,9 @@ export function PostDetailModal({
                 </span>
               )}
               {post.status === 'pending' && (
-                <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center gap-1">
-                  <Clock className="w-3 h-3 animate-spin" />
-                  待審核中
+                <span className="px-2.5 py-1 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center gap-1.5 shadow-xs">
+                  <Clock className="w-3.5 h-3.5 animate-spin" />
+                  {isTeacher ? '待審核' : '等待老師同意中'}
                 </span>
               )}
             </div>
@@ -496,6 +496,19 @@ export function PostDetailModal({
                       <CheckCircle2 className="w-4 h-4" />
                       <span>通過發布</span>
                     </button>
+                  </div>
+                )}
+
+                {/* 待審核提示（學生/作者視角） */}
+                {post.status === 'pending' && !isTeacher && (
+                  <div className="p-3.5 bg-amber-100/90 dark:bg-amber-950/60 rounded-2xl border border-amber-300 dark:border-amber-800 flex items-center gap-3 text-amber-950 dark:text-amber-200 text-xs font-bold shadow-xs">
+                    <Clock className="w-5 h-5 text-amber-600 animate-spin shrink-0" />
+                    <div className="leading-relaxed">
+                      <p className="font-black text-amber-900 dark:text-amber-100">便籤已成功發布，等待老師同意中</p>
+                      <p className="text-[11px] font-normal text-amber-800/80 dark:text-amber-300/80">
+                        此看板已開啟「發布前需經老師審核」設定，待開板老師審核通過後即會公開展示給全班同學！
+                      </p>
+                    </div>
                   </div>
                 )}
 

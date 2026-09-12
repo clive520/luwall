@@ -222,9 +222,9 @@ export function PostCard({
     >
       {/* 待審核標籤 */}
       {post.status === 'pending' && (
-        <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-xs flex items-center gap-1">
-          <Clock className="w-3 h-3 animate-spin" />
-          <span>待審核中</span>
+        <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 z-10 animate-pulse">
+          <Clock className="w-3.5 h-3.5 animate-spin shrink-0" />
+          <span>等待老師同意中</span>
         </div>
       )}
 
@@ -360,6 +360,19 @@ export function PostCard({
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>通過發布</span>
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 學生/發布者提示（若非教師） */}
+      {post.status === 'pending' && !isTeacher && (
+        <div className="mt-4 p-3 bg-amber-50/90 rounded-2xl border border-amber-300 flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-xs">
+          <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
+          <div className="leading-tight">
+            <span>已成功發布，等待老師同意中...</span>
+            <span className="block text-[11px] font-normal text-amber-800/80 mt-0.5">
+              老師審核通過後，其他同學就能看到囉！
+            </span>
           </div>
         </div>
       )}

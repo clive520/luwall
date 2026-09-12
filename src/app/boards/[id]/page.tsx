@@ -100,7 +100,17 @@ export default function BoardPage({
   // 載入看板資料
   const fetchBoardData = useCallback(async () => {
     try {
-      const res = await fetch(`/api/boards/${id}`);
+      let guestQuery = '';
+      try {
+        const guestPending = JSON.parse(localStorage.getItem('luwall_guest_pending_posts') || '[]');
+        if (Array.isArray(guestPending) && guestPending.length > 0) {
+          guestQuery = `?guestPosts=${encodeURIComponent(guestPending.join(','))}`;
+        }
+      } catch {
+        // 忽略
+      }
+
+      const res = await fetch(`/api/boards/${id}${guestQuery}`);
       const data = await res.json();
       if (!res.ok) {
         if (data.isRestricted) {
@@ -130,7 +140,17 @@ export default function BoardPage({
   // 設定 SSE 即時同步監聽
   useEffect(() => {
     if (!id || isRestricted) return;
-    const eventSource = new EventSource(`/api/boards/${id}/stream`);
+    let guestQuery = '';
+    try {
+      const guestPending = JSON.parse(localStorage.getItem('luwall_guest_pending_posts') || '[]');
+      if (Array.isArray(guestPending) && guestPending.length > 0) {
+        guestQuery = `?guestPosts=${encodeURIComponent(guestPending.join(','))}`;
+      }
+    } catch {
+      // 忽略
+    }
+
+    const eventSource = new EventSource(`/api/boards/${id}/stream${guestQuery}`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -150,6 +170,13 @@ export default function BoardPage({
       eventSource.close();
     };
   }, [id, isRestricted]);
+
+  const handlePostCreated = (createdPost?: Post) => {
+    if (createdPost) {
+      setPosts((prev) => [createdPost, ...prev.filter((p) => p.id !== createdPost.id)]);
+    }
+    fetchBoardData();
+  };
 
   const handlePostUpdated = (updatedPost: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
@@ -403,7 +430,7 @@ export default function BoardPage({
           setIsCreatePostOpen(false);
           setInitialAttachment(undefined);
         }}
-        onPostCreated={fetchBoardData}
+        onPostCreated={handlePostCreated}
       />
 
       <QRCodeModal

@@ -444,14 +444,33 @@ export const db = {
   },
 
   // Posts
-  getPostsByBoardId: (boardId: string, includePending = false): Post[] => {
+  getPostsByBoardId: (
+    boardId: string,
+    includePending = false,
+    currentUserId?: string,
+    guestPostIds: string[] = []
+  ): Post[] => {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     return posts
-      .filter((p) => p.boardId === boardId && (includePending || p.status === 'approved'))
+      .filter((p) => {
+        if (p.boardId !== boardId) return false;
+        if (includePending) return true;
+        if (p.status === 'approved') return true;
+        // 學生可看見自己所發表、尚未審核通過的便籤
+        if (Boolean(currentUserId) && p.authorId === currentUserId) return true;
+        // 訪客透過暫存 ID 看見自己發表的便籤
+        if (guestPostIds.includes(p.id)) return true;
+        return false;
+      })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
-  getPostsByBoardIdAsync: async (boardId: string, includePending = false): Promise<Post[]> => {
-    let posts = db.getPostsByBoardId(boardId, includePending);
+  getPostsByBoardIdAsync: async (
+    boardId: string,
+    includePending = false,
+    currentUserId?: string,
+    guestPostIds: string[] = []
+  ): Promise<Post[]> => {
+    let posts = db.getPostsByBoardId(boardId, includePending, currentUserId, guestPostIds);
     if (posts.length === 0 && isSupabaseConfigured()) {
       const remote = await fetchPostsFromSupabase(boardId);
       if (remote.length > 0) {
@@ -462,7 +481,7 @@ export const db = {
           }
         }
         writeJson(POSTS_FILE, allPosts, 'posts');
-        posts = includePending ? remote : remote.filter((p) => p.status === 'approved');
+        posts = db.getPostsByBoardId(boardId, includePending, currentUserId, guestPostIds);
       }
     }
     return posts;
