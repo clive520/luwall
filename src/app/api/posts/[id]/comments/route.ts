@@ -8,6 +8,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await db.ensureHydrated();
   const { id } = await params;
   const comments = db.getCommentsByPostId(id);
   return NextResponse.json({ comments });
@@ -18,6 +19,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await db.ensureHydrated();
     const { id } = await params;
     const user = await getCurrentUser();
     const body = await request.json();

@@ -23,6 +23,7 @@ async function requireTeacherOrAdmin() {
 
 // 取得所有使用者列表（教師與管理員皆可存取）
 export async function GET() {
+  await db.ensureHydrated();
   const operator = await requireTeacherOrAdmin();
   if (!operator) {
     return NextResponse.json({ error: '權限不足：僅教師與系統管理員可存取' }, { status: 403 });
@@ -34,6 +35,7 @@ export async function GET() {
 
 // 修改使用者身分角色（教師與管理員可核定/變更為教師、學生或管理員）
 export async function PATCH(request: NextRequest) {
+  await db.ensureHydrated();
   const operator = await requireTeacherOrAdmin();
   if (!operator) {
     return NextResponse.json({ error: '權限不足：僅教師與系統管理員可操作' }, { status: 403 });
@@ -114,6 +116,7 @@ export async function PATCH(request: NextRequest) {
 
 // 刪除 / 註銷使用者帳號
 export async function DELETE(request: NextRequest) {
+  await db.ensureHydrated();
   const admin = await requireAdmin();
   if (!admin) {
     return NextResponse.json({ error: '權限不足：僅系統管理員可操作' }, { status: 403 });

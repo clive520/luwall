@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Post, Comment, User, Section } from '@/types';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
@@ -166,23 +166,25 @@ export function PostCard({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 自動解析附件：若無 attachment，但 content 中含有網址 (YouTube 或一般連結)，自動作為預覽附件
-  const contentUrls = findUrls(post.content);
-  const effectiveAttachment =
-    post.attachment ||
-    (contentUrls.length > 0
-      ? {
-          type: 'link' as const,
-          url: contentUrls[0],
-          title: extractYouTubeId(contentUrls[0]) ? 'YouTube 影片' : contentUrls[0],
-          metadata: extractYouTubeId(contentUrls[0])
-            ? {
-                youtubeId: extractYouTubeId(contentUrls[0])!,
-                ogImage: getYouTubeThumbnail(extractYouTubeId(contentUrls[0])!),
-              }
-            : undefined,
-        }
-      : null);
+  // 自動解析附件：若無 attachment，但 content 中含有網址 (YouTube 或一般連結)，自動作為預覽附件 (以 useMemo 快取避免重複正規表達式運算)
+  const effectiveAttachment = useMemo(() => {
+    if (post.attachment) return post.attachment;
+    const urls = findUrls(post.content);
+    if (urls.length === 0) return null;
+    const url = urls[0];
+    const ytId = extractYouTubeId(url);
+    return {
+      type: 'link' as const,
+      url,
+      title: ytId ? 'YouTube 影片' : url,
+      metadata: ytId
+        ? {
+            youtubeId: ytId,
+            ogImage: getYouTubeThumbnail(ytId),
+          }
+        : undefined,
+    };
+  }, [post.attachment, post.content]);
 
   return (
     <div

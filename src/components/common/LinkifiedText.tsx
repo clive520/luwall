@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ExternalLink } from 'lucide-react';
 
 interface LinkifiedTextProps {
@@ -8,12 +8,16 @@ interface LinkifiedTextProps {
   className?: string;
 }
 
-export function LinkifiedText({ text, className = '' }: LinkifiedTextProps) {
-  if (!text) return null;
+// 匹配 http:// 或 https:// 網址 (靜態正規表示式，避免每次重繪重新實例化)
+const URL_REGEX = /(https?:\/\/[^\s<>"{}|\\^\`[\]]+)/g;
 
-  // 匹配 http:// 或 https:// 網址
-  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^\`[\]]+)/g;
-  const parts = text.split(urlRegex);
+export function LinkifiedText({ text, className = '' }: LinkifiedTextProps) {
+  const parts = useMemo(() => {
+    if (!text) return [];
+    return text.split(URL_REGEX);
+  }, [text]);
+
+  if (!text) return null;
 
   return (
     <span className={className}>

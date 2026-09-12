@@ -69,12 +69,16 @@ export default function BoardPage({
 
   const handleZoomChange = (newZoom: number) => {
     setZoomLevel(newZoom);
+  };
+
+  // 儲存縮放設定至本機儲存 (集中管理，避免在滾輪頻繁更新中產生副作用)
+  useEffect(() => {
     try {
-      localStorage.setItem('luwall_board_zoom', newZoom.toString());
+      localStorage.setItem('luwall_board_zoom', zoomLevel.toString());
     } catch {
       // 忽略
     }
-  };
+  }, [zoomLevel]);
 
   // 支援 Ctrl + 滑鼠滾輪縮放
   useEffect(() => {
@@ -82,21 +86,9 @@ export default function BoardPage({
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         if (e.deltaY < 0) {
-          setZoomLevel((prev) => {
-            const next = Math.min(150, prev + 5);
-            try {
-              localStorage.setItem('luwall_board_zoom', next.toString());
-            } catch {}
-            return next;
-          });
+          setZoomLevel((prev) => Math.min(150, prev + 5));
         } else if (e.deltaY > 0) {
-          setZoomLevel((prev) => {
-            const next = Math.max(50, prev - 5);
-            try {
-              localStorage.setItem('luwall_board_zoom', next.toString());
-            } catch {}
-            return next;
-          });
+          setZoomLevel((prev) => Math.max(50, prev - 5));
         }
       }
     };
