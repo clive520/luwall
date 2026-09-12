@@ -2,6 +2,19 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { Board, Post, Comment, Reaction, User, UserRole, Section } from '@/types';
+import {
+  isSupabaseConfigured,
+  syncBoardToSupabase,
+  deleteBoardFromSupabase,
+  syncSectionToSupabase,
+  deleteSectionFromSupabase,
+  syncPostToSupabase,
+  deletePostFromSupabase,
+  syncUserToSupabase,
+  deleteUserFromSupabase,
+  syncCommentToSupabase,
+  hydrateFromSupabase,
+} from '@/lib/supabase/adapter';
 
 // 在 Serverless (Vercel) 環境中，只有 os.tmpdir() 具備讀寫權限
 const DATA_DIR =
@@ -112,6 +125,52 @@ function writeJson<T>(file: string, data: T, key: keyof typeof memoryStore) {
   } catch {
     // 忽略
   }
+}
+
+// ==========================================
+// Supabase 狀態水合管理
+// ==========================================
+let hydrationPromise: Promise<void> | null = null;
+
+export async function ensureHydrated(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  if (!hydrationPromise) {
+    hydrationPromise = (async () => {
+      try {
+        const data = await hydrateFromSupabase();
+        if (data) {
+          if (data.boards && data.boards.length > 0) {
+            memoryStore.boards = data.boards;
+            writeJson(BOARDS_FILE, data.boards, 'boards');
+          }
+          if (data.sections && data.sections.length > 0) {
+            memoryStore.sections = data.sections;
+            writeJson(SECTIONS_FILE, data.sections, 'sections');
+          }
+          if (data.posts && data.posts.length > 0) {
+            memoryStore.posts = data.posts;
+            writeJson(POSTS_FILE, data.posts, 'posts');
+          }
+          if (data.users && data.users.length > 0) {
+            memoryStore.users = data.users;
+            writeJson(USERS_FILE, data.users, 'users');
+          }
+          if (data.comments && data.comments.length > 0) {
+            memoryStore.comments = data.comments;
+            writeJson(COMMENTS_FILE, data.comments, 'comments');
+          }
+        }
+      } catch (err) {
+        console.error('ensureHydrated failed:', err);
+      }
+    })();
+  }
+  await hydrationPromise;
+}
+
+// 模組載入時，若已設置 Supabase 則於背景預先水合
+if (isSupabaseConfigured()) {
+  ensureHydrated().catch(() => {});
 }
 
 const DEFAULT_BOARD: Board = {
@@ -232,6 +291,8 @@ const DEFAULT_POSTS: Post[] = [
 ];
 
 export const db = {
+  ensureHydrated,
+
   // Boards
   getBoards: (): Board[] => {
     return readJson<Board[]>(BOARDS_FILE, [DEFAULT_BOARD], 'boards');
@@ -244,6 +305,9 @@ export const db = {
     const boards = db.getBoards();
     boards.unshift(board);
     writeJson(BOARDS_FILE, boards, 'boards');
+    if (isSupabaseConfigured()) {
+      syncBoardToSupabase(board).catch(console.error);
+    }
 
     // 建立新看板時，自動為其產生一個預設主題欄位
     db.createSection({
@@ -262,6 +326,9 @@ export const db = {
     if (idx === -1) return undefined;
     boards[idx] = { ...boards[idx], ...updates, updatedAt: new Date().toISOString() };
     writeJson(BOARDS_FILE, boards, 'boards');
+    if (isSupabaseConfigured()) {
+      syncBoardToSupabase(boards[idx]).catch(console.error);
+    }
     return boards[idx];
   },
   deleteBoard: (id: string): boolean => {
@@ -269,6 +336,9 @@ export const db = {
     const filtered = boards.filter((b) => b.id !== id);
     if (filtered.length === boards.length) return false;
     writeJson(BOARDS_FILE, filtered, 'boards');
+    if (isSupabaseConfigured()) {
+      deleteBoardFromSupabase(id).catch(console.error);
+    }
     return true;
   },
 
@@ -298,6 +368,9 @@ export const db = {
     const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
     allSections.push(section);
     writeJson(SECTIONS_FILE, allSections, 'sections');
+    if (isSupabaseConfigured()) {
+      syncSectionToSupabase(section).catch(console.error);
+    }
     return section;
   },
   updateSection: (id: string, title: string): Section | undefined => {
@@ -306,6 +379,9 @@ export const db = {
     if (idx === -1) return undefined;
     allSections[idx].title = title.trim();
     writeJson(SECTIONS_FILE, allSections, 'sections');
+    if (isSupabaseConfigured()) {
+      syncSectionToSupabase(allSections[idx]).catch(console.error);
+    }
     return allSections[idx];
   },
   deleteSection: (id: string): boolean => {
@@ -313,6 +389,9 @@ export const db = {
     const filtered = allSections.filter((s) => s.id !== id);
     if (filtered.length === allSections.length) return false;
     writeJson(SECTIONS_FILE, filtered, 'sections');
+    if (isSupabaseConfigured()) {
+      deleteSectionFromSupabase(id).catch(console.error);
+    }
     return true;
   },
 
@@ -331,6 +410,9 @@ export const db = {
     const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
     posts.unshift(post);
     writeJson(POSTS_FILE, posts, 'posts');
+    if (isSupabaseConfigured()) {
+      syncPostToSupabase(post).catch(console.error);
+    }
     return post;
   },
   updatePost: (id: string, updates: Partial<Post>): Post | undefined => {
@@ -339,6 +421,9 @@ export const db = {
     if (idx === -1) return undefined;
     posts[idx] = { ...posts[idx], ...updates, updatedAt: new Date().toISOString() };
     writeJson(POSTS_FILE, posts, 'posts');
+    if (isSupabaseConfigured()) {
+      syncPostToSupabase(posts[idx]).catch(console.error);
+    }
     return posts[idx];
   },
   deletePost: (id: string): boolean => {
@@ -346,6 +431,9 @@ export const db = {
     const filtered = posts.filter((p) => p.id !== id);
     if (filtered.length === posts.length) return false;
     writeJson(POSTS_FILE, filtered, 'posts');
+    if (isSupabaseConfigured()) {
+      deletePostFromSupabase(id).catch(console.error);
+    }
     return true;
   },
 
@@ -382,6 +470,9 @@ export const db = {
       users.push(user);
     }
     writeJson(USERS_FILE, users, 'users');
+    if (isSupabaseConfigured()) {
+      syncUserToSupabase(user).catch(console.error);
+    }
     return user;
   },
   updateUserRole: (userId: string, role: UserRole): User | undefined => {
@@ -390,6 +481,9 @@ export const db = {
     if (idx === -1) return undefined;
     users[idx].role = role;
     writeJson(USERS_FILE, users, 'users');
+    if (isSupabaseConfigured()) {
+      syncUserToSupabase(users[idx]).catch(console.error);
+    }
     return users[idx];
   },
   deleteUser: (userId: string): boolean => {
@@ -397,6 +491,9 @@ export const db = {
     const filtered = users.filter((u) => u.id !== userId);
     if (filtered.length === users.length) return false;
     writeJson(USERS_FILE, filtered, 'users');
+    if (isSupabaseConfigured()) {
+      deleteUserFromSupabase(userId).catch(console.error);
+    }
     return true;
   },
 
@@ -411,6 +508,9 @@ export const db = {
     const comments = readJson<Comment[]>(COMMENTS_FILE, [], 'comments');
     comments.push(comment);
     writeJson(COMMENTS_FILE, comments, 'comments');
+    if (isSupabaseConfigured()) {
+      syncCommentToSupabase(comment).catch(console.error);
+    }
 
     const post = db.getPostById(comment.postId);
     if (post) {

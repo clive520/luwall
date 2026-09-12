@@ -6,6 +6,7 @@ import { User } from '@/types';
 
 export async function POST(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const body = await request.json();
     const { action, username, password, name, role = 'student', email } = body;
 

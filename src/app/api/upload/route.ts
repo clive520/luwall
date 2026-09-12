@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isR2Configured, uploadToR2 } from '@/lib/storage/r2';
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const fileType = formData.get('type') as string; // 'image' | 'audio'
+    const fileType = (formData.get('type') as string) || 'image'; // 'image' | 'audio'
 
     if (!file) {
       return NextResponse.json({ error: '未提供檔案' }, { status: 400 });
@@ -31,14 +32,37 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
-    // 在 Vercel Serverless 環境下，使用 Base64 Data URL 可保證跨實例永久可讀且免外掛儲存空間
     const effectiveMime = mime || (fileType === 'audio' ? 'audio/webm' : 'image/jpeg');
+
+    // 1. 若已設定 Cloudflare R2，優先直接上傳至 R2 取得免流量 CDN 網址
+    if (isR2Configured()) {
+      try {
+        const r2Url = await uploadToR2({
+          buffer,
+          mime: effectiveMime,
+          originalName: file.name,
+          folder: fileType === 'audio' ? 'audio' : 'images',
+        });
+
+        return NextResponse.json({
+          success: true,
+          url: r2Url,
+          storage: 'cloudflare_r2',
+          fileName: file.name,
+          size: file.size,
+        });
+      } catch (r2Err) {
+        console.error('Cloudflare R2 upload error, falling back to Data URL:', r2Err);
+      }
+    }
+
+    // 2. 備援回退機制：轉為 Base64 Data URL (保證在未設定 R2 時依然 100% 正常運作)
     const dataUrl = `data:${effectiveMime};base64,${buffer.toString('base64')}`;
 
     return NextResponse.json({
       success: true,
       url: dataUrl,
+      storage: 'base64_fallback',
       fileName: file.name,
       size: file.size,
     });

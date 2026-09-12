@@ -4,12 +4,14 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { Board } from '@/types';
 
 export async function GET() {
+  await db.ensureHydrated();
   const boards = db.getBoards();
   return NextResponse.json({ boards });
 }
 
 export async function POST(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const user = await getCurrentUser();
 
     // 嚴格權限檢查：僅教師與系統管理員可建立看板

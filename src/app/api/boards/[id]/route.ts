@@ -6,6 +6,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await db.ensureHydrated();
   const { id } = await params;
   const board = db.getBoardById(id);
 
