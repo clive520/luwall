@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '@/types';
 import { X, GraduationCap, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -17,12 +18,17 @@ export function ApplyTeacherModal({
   currentUser,
   onApplicationUpdated,
 }: ApplyTeacherModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [reason, setReason] = useState(currentUser.teacherApplicationReason || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const isPending = currentUser.teacherApplicationStatus === 'pending';
   const isRejected = currentUser.teacherApplicationStatus === 'rejected';
@@ -54,9 +60,9 @@ export function ApplyTeacherModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 dark:border-slate-800 relative">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in overflow-y-auto">
+      <div className="relative my-auto w-full max-w-md max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-gray-100 dark:border-slate-800">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition"
@@ -202,6 +208,7 @@ export function ApplyTeacherModal({
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
