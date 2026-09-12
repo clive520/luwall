@@ -44,6 +44,31 @@ function ensureDataDir() {
   }
 }
 
+// 預設種子超級管理員帳號 (密碼: admin12345678)
+const SUPER_ADMIN_USER: User & { passwordHash?: string } = {
+  id: 'super-admin-001',
+  provider: 'local',
+  username: 'admin',
+  name: '超級系統管理員',
+  role: 'admin',
+  email: 'admin@luyang.edu.tw',
+  passwordHash: '$2b$10$S0xJ.fkcJwEXFn7V9gX9u.yr4YSpYvdfhuX6rWfp0ToT2JUtV/Fm6',
+  createdAt: new Date().toISOString(),
+};
+
+const DEFAULT_USERS: (User & { passwordHash?: string })[] = [
+  SUPER_ADMIN_USER,
+  {
+    id: 'teacher-luyang-001',
+    provider: 'luyang_sso',
+    username: 'teacher_lin',
+    name: '林老師',
+    role: 'teacher',
+    email: 'teacher@luyang.edu.tw',
+    createdAt: new Date().toISOString(),
+  },
+];
+
 function readJson<T>(file: string, defaultData: T, key: keyof typeof memoryStore): T {
   if (memoryStore[key]) {
     return memoryStore[key] as T;
@@ -86,28 +111,6 @@ function writeJson<T>(file: string, data: T, key: keyof typeof memoryStore) {
     // 忽略
   }
 }
-
-// 預設種子使用者
-const DEFAULT_USERS: (User & { passwordHash?: string })[] = [
-  {
-    id: 'admin-001',
-    provider: 'local',
-    username: 'admin',
-    name: '系統管理員',
-    role: 'admin',
-    email: 'admin@luyang.edu.tw',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'teacher-luyang-001',
-    provider: 'luyang_sso',
-    username: 'teacher_lin',
-    name: '林老師',
-    role: 'teacher',
-    email: 'teacher@luyang.edu.tw',
-    createdAt: new Date().toISOString(),
-  },
-];
 
 const DEFAULT_BOARD: Board = {
   id: 'demo-stream-board',
@@ -263,7 +266,20 @@ export const db = {
 
   // Users
   getUsers: (): (User & { passwordHash?: string })[] => {
-    return readJson<(User & { passwordHash?: string })[]>(USERS_FILE, DEFAULT_USERS, 'users');
+    const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, DEFAULT_USERS, 'users');
+
+    // 確保超級管理員 admin 永遠存在且具備正確的密碼雜湊
+    const adminUser = users.find((u) => u.username === 'admin');
+    if (!adminUser) {
+      users.unshift(SUPER_ADMIN_USER);
+      writeJson(USERS_FILE, users, 'users');
+    } else if (!adminUser.passwordHash || adminUser.role !== 'admin') {
+      adminUser.passwordHash = SUPER_ADMIN_USER.passwordHash;
+      adminUser.role = 'admin';
+      writeJson(USERS_FILE, users, 'users');
+    }
+
+    return users;
   },
   getUserById: (id: string): User | undefined => {
     const users = db.getUsers();

@@ -26,28 +26,31 @@ export function verifyLuyangToken(token: string): { success: boolean; payload?: 
 
 /**
  * 將鹿陽 SSO 驗證成功的 payload 轉換或同步為本系統 User
+ * 完全依照 SSO Token 內的 role 欄位決定身分 (admin / teacher / student)
  */
 export function syncLuyangUser(payload: LuyangSSOPayload): User {
   const existingUser = db.getUserById(payload.uid);
 
-  // 判斷角色：若原先已在資料庫核定過角色，優先保留；
-  // 否則若姓名為「吳睿紘」或 role 為 admin，自動設為 admin；
-  // 其餘依照 SSO 的 role (teacher / student)
-  let initialRole: UserRole = 'student';
-  if (payload.name === '吳睿紘' || payload.role === 'admin' || payload.username === 'admin') {
-    initialRole = 'admin';
+  // 1. 若資料庫原先已存在此人，且曾被系統管理員在後台人工核定過身分，則尊重管理員核定結果
+  // 2. 若為初次登入，完全忠實讀取鹿陽 SSO 的 role 欄位
+  let role: UserRole = 'student';
+  if (payload.role === 'admin') {
+    role = 'admin';
   } else if (payload.role === 'teacher') {
-    initialRole = 'teacher';
+    role = 'teacher';
+  } else {
+    role = 'student';
   }
 
-  const role: UserRole = existingUser?.role || initialRole;
+  // 若資料庫曾有記錄且非初次建立，可優先依據管理員設定
+  const finalRole: UserRole = existingUser?.role || role;
 
   const userData: User = {
     id: payload.uid,
     provider: 'luyang_sso',
     username: payload.username,
     name: payload.name,
-    role,
+    role: finalRole,
     createdAt: existingUser?.createdAt || new Date().toISOString(),
   };
 

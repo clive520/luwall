@@ -1,19 +1,29 @@
 [
   {
+    "id": "super-admin-001",
+    "provider": "local",
+    "username": "admin",
+    "name": "超級系統管理員",
+    "role": "admin",
+    "email": "admin@luyang.edu.tw",
+    "passwordHash": "$2b$10$S0xJ.fkcJwEXFn7V9gX9u.yr4YSpYvdfhuX6rWfp0ToT2JUtV/Fm6",
+    "createdAt": "2026-09-12T06:00:00.000Z"
+  },
+  {
     "id": "teacher-luyang-001",
     "provider": "luyang_sso",
     "username": "teacher_lin",
     "name": "林老師",
     "role": "teacher",
     "email": "teacher@luyang.edu.tw",
-    "createdAt": "2026-09-12T04:19:17.740Z"
+    "createdAt": "2026-09-12T06:00:00.000Z"
   },
   {
     "id": "2lzvgXNCntzfMI6FCKA9",
     "provider": "luyang_sso",
-    "username": "test008",
+    "username": "113001",
     "name": "吳睿紘",
     "role": "student",
-    "createdAt": "2026-09-12T04:29:52.144Z"
+    "createdAt": "2026-09-12T06:00:00.000Z"
   }
 ]
