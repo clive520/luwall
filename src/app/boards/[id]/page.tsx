@@ -10,6 +10,7 @@ import { CreatePostModal } from '@/components/board/CreatePostModal';
 import { QRCodeModal } from '@/components/board/QRCodeModal';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
 import { BoardSettingsModal } from '@/components/board/BoardSettingsModal';
+import { PostDetailModal } from '@/components/board/PostDetailModal';
 import {
   QrCode,
   Plus,
@@ -47,6 +48,7 @@ export default function BoardPage({
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   // 載入看板資料
   const fetchBoardData = useCallback(async () => {
@@ -88,6 +90,9 @@ export default function BoardPage({
         const data = JSON.parse(event.data);
         if (data.type === 'sync' && Array.isArray(data.posts)) {
           setPosts(data.posts);
+          setSelectedPost((curr) =>
+            curr ? data.posts.find((p: Post) => p.id === curr.id) || curr : null
+          );
         }
       } catch {
         // 忽略
@@ -101,10 +106,12 @@ export default function BoardPage({
 
   const handlePostUpdated = (updatedPost: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updatedPost.id ? updatedPost : p)));
+    setSelectedPost((curr) => (curr?.id === updatedPost.id ? updatedPost : curr));
   };
 
   const handlePostDeleted = (postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+    setSelectedPost((curr) => (curr?.id === postId ? null : curr));
   };
 
   const handleOpenCreatePost = (sectionId?: string, attachment?: MediaAttachment) => {
@@ -306,6 +313,7 @@ export default function BoardPage({
           posts={posts}
           currentUser={currentUser}
           isOwner={isOwner}
+          onPostClick={(post) => setSelectedPost(post)}
           onOpenCreatePost={handleOpenCreatePost}
           onPostUpdated={handlePostUpdated}
           onPostDeleted={handlePostDeleted}
@@ -314,6 +322,21 @@ export default function BoardPage({
       </main>
 
       {/* 彈窗元件 */}
+      {selectedPost && (
+        <PostDetailModal
+          post={selectedPost}
+          allPosts={posts}
+          sections={sections}
+          currentUser={currentUser}
+          isOwner={isOwner}
+          isOpen={Boolean(selectedPost)}
+          onClose={() => setSelectedPost(null)}
+          onSelectPost={(p) => setSelectedPost(p)}
+          onPostUpdated={handlePostUpdated}
+          onPostDeleted={handlePostDeleted}
+        />
+      )}
+
       <CreatePostModal
         board={board}
         sections={sections}

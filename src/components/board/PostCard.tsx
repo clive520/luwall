@@ -25,6 +25,7 @@ interface PostCardProps {
   sections?: Section[];
   currentUser: User | null;
   isOwner: boolean; // 看板擁有者 (教師或管理員)
+  onPostClick?: (post: Post) => void;
   onPostUpdated: (updatedPost: Post) => void;
   onPostDeleted: (postId: string) => void;
 }
@@ -34,6 +35,7 @@ export function PostCard({
   sections,
   currentUser,
   isOwner,
+  onPostClick,
   onPostUpdated,
   onPostDeleted,
 }: PostCardProps) {
@@ -184,8 +186,9 @@ export function PostCard({
 
   return (
     <div
+      onClick={() => onPostClick?.(post)}
       style={{ backgroundColor: post.color || '#ffffff' }}
-      className={`rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 border border-black/5 relative group flex flex-col justify-between ${
+      className={`rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-lg hover:-translate-y-0.5 cursor-pointer transition-all duration-200 border border-black/5 relative group flex flex-col justify-between ${
         post.status === 'pending' ? 'ring-2 ring-amber-400/80' : ''
       }`}
     >
@@ -229,7 +232,10 @@ export function PostCard({
           <div className="flex items-center gap-1">
             {canEdit && (
               <button
-                onClick={() => setIsEditing(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditing(true);
+                }}
                 title="編輯便籤內容"
                 className="opacity-60 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-amber-600 hover:bg-black/5 rounded-lg transition"
               >
@@ -238,7 +244,10 @@ export function PostCard({
             )}
             {canDelete && (
               <button
-                onClick={handleDelete}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
                 title={isAdmin ? '管理員刪除' : isOwner ? '教師刪除' : '刪除我的貼文'}
                 className="opacity-60 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-600 hover:bg-black/5 rounded-lg transition"
               >
@@ -275,7 +284,10 @@ export function PostCard({
 
             {/* 錄音音訊 */}
             {effectiveAttachment.type === 'audio' && (
-              <div className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3 border border-black/5">
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3 border border-black/5"
+              >
                 <div className="p-2.5 rounded-full bg-amber-600 text-white shadow-xs">
                   <Volume2 className="w-5 h-5" />
                 </div>
@@ -288,7 +300,9 @@ export function PostCard({
 
             {/* 外部連結或 YouTube (含縮圖、可點擊與原地播放) */}
             {effectiveAttachment.type === 'link' && (
-              <LinkPreviewCard attachment={effectiveAttachment} />
+              <div onClick={(e) => e.stopPropagation()}>
+                <LinkPreviewCard attachment={effectiveAttachment} />
+              </div>
             )}
           </div>
         )}
@@ -302,7 +316,10 @@ export function PostCard({
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleApprove}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleApprove();
+              }}
               className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -317,7 +334,10 @@ export function PostCard({
         <div className="flex items-center gap-3">
           {/* 點讚 */}
           <button
-            onClick={handleLike}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLike();
+            }}
             disabled={isLiking}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
               post.likeCount > 0
@@ -331,7 +351,10 @@ export function PostCard({
 
           {/* 留言切換 */}
           <button
-            onClick={loadComments}
+            onClick={(e) => {
+              e.stopPropagation();
+              loadComments();
+            }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-gray-600 hover:bg-black/5 transition"
           >
             <MessageCircle className="w-3.5 h-3.5" />
@@ -342,7 +365,10 @@ export function PostCard({
 
       {/* 留言抽屜展開 */}
       {showComments && (
-        <div className="mt-3 pt-3 border-t border-black/5 space-y-2">
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="mt-3 pt-3 border-t border-black/5 space-y-2"
+        >
           {loadingComments ? (
             <div className="text-xs text-gray-400 text-center py-2">載入留言中...</div>
           ) : comments.length === 0 ? (

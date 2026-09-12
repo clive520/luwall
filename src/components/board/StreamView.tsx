@@ -10,6 +10,7 @@ interface StreamViewProps {
   posts: Post[];
   currentUser: User | null;
   isOwner: boolean;
+  onPostClick?: (post: Post) => void;
   onOpenCreatePost: () => void;
   onPostUpdated: (post: Post) => void;
   onPostDeleted: (postId: string) => void;
@@ -20,6 +21,7 @@ export function StreamView({
   posts,
   currentUser,
   isOwner,
+  onPostClick,
   onOpenCreatePost,
   onPostUpdated,
   onPostDeleted,
@@ -107,6 +109,7 @@ export function StreamView({
               post={post}
               currentUser={currentUser}
               isOwner={isOwner}
+              onPostClick={onPostClick}
               onPostUpdated={onPostUpdated}
               onPostDeleted={onPostDeleted}
             />
