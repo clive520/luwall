@@ -64,29 +64,49 @@ export default function HomePage() {
 
           {/* 快捷操作按鈕 */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={() => setIsCreateBoardOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition transform active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>建立新看板 🎯</span>
-            </button>
-
-            {!currentUser && (
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-sm border border-amber-200 shadow-xs transition"
+            {/* 僅教師與系統管理員具備開立新看板權限，訪客與學生不可見 */}
+            {(currentUser?.role === 'teacher' || currentUser?.role === 'admin') && (
+              <button
+                onClick={() => setIsCreateBoardOpen(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition transform active:scale-95"
               >
-                <LogIn className="w-4 h-4 text-amber-600" />
-                <span>登入參與 🪪</span>
-              </Link>
+                <Plus className="w-4 h-4" />
+                <span>建立新看板 🎯</span>
+              </button>
             )}
+
+            {!currentUser ? (
+              <>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition transform active:scale-95"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>登入帳號 🪪</span>
+                </Link>
+                <a
+                  href="#board-list"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-sm border border-amber-200 shadow-xs transition"
+                >
+                  <Layers className="w-4 h-4 text-amber-600" />
+                  <span>瀏覽開放看板 👇</span>
+                </a>
+              </>
+            ) : currentUser.role === 'student' ? (
+              <a
+                href="#board-list"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition transform active:scale-95"
+              >
+                <Layers className="w-4 h-4" />
+                <span>瀏覽班級看板 📚</span>
+              </a>
+            ) : null}
           </div>
         </div>
       </section>
 
       {/* 看板大廳區塊 */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+      <section id="board-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-amber-700" />

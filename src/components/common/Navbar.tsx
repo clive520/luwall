@@ -84,15 +84,11 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
             </Link>
           )}
 
-          {/* 新看板按鈕 */}
-          {onOpenCreateBoard && (
+          {/* 新看板按鈕：僅教師與系統管理員可見，訪客與學生不可見 */}
+          {!loading && (user?.role === 'teacher' || user?.role === 'admin') && onOpenCreateBoard && (
             <button
               onClick={handleCreateBoardClick}
-              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-xs transition ${
-                user?.role === 'teacher' || user?.role === 'admin'
-                  ? 'bg-amber-600 hover:bg-amber-700 active:bg-amber-800'
-                  : 'bg-amber-600/80 hover:bg-amber-700'
-              }`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-white text-xs sm:text-sm font-semibold shadow-xs transition bg-amber-600 hover:bg-amber-700 active:bg-amber-800"
             >
               <PlusCircle className="w-4 h-4" />
               <span>新看板</span>
