@@ -12,7 +12,7 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     let handled = false;
 
-    async function finishLogin(user: { email?: string; user_metadata?: Record<string, any> }) {
+    async function finishLogin(user: { id?: string; email?: string; user_metadata?: Record<string, any> }) {
       if (handled) return;
       handled = true;
       setStatus('登入成功，正在為您同步個人資料...');
@@ -25,12 +25,13 @@ export default function AuthCallbackPage() {
         email.split('@')[0] ||
         'Google 老師';
       const avatarUrl = user.user_metadata?.avatar_url || null;
+      const authUserId = user.id || null;
 
       try {
         const res = await fetch('/api/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, name, avatarUrl }),
+          body: JSON.stringify({ email, name, avatarUrl, authUserId }),
         });
 
         if (res.ok) {

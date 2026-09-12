@@ -228,7 +228,14 @@ export default function AdminPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-gray-400">帳號: {u.username}</div>
+                      <div className="text-[11px] text-gray-400 flex items-center gap-1.5 flex-wrap">
+                        <span>帳號: {u.username}</span>
+                        {u.email && (
+                          <span className="text-gray-500 font-normal">
+                            ({u.email})
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3.5 px-3">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 text-[11px]">

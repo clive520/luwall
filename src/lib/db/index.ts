@@ -457,6 +457,11 @@ export const db = {
     const users = db.getUsers();
     return users.find((u) => u.id === id);
   },
+  getUserByEmail: (email: string): (User & { passwordHash?: string }) | undefined => {
+    const users = db.getUsers();
+    const normalized = email.toLowerCase().trim();
+    return users.find((u) => u.email?.toLowerCase().trim() === normalized);
+  },
   getUserByUsername: (username: string): (User & { passwordHash?: string }) | undefined => {
     const users = db.getUsers();
     return users.find((u) => u.username === username);

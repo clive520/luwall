@@ -1,4 +1,4 @@
-﻿-- ==========================================================
+-- ==========================================================
 -- 鹿鳴牆 LuWall - Supabase PostgreSQL Schema
 -- 可直接於 Supabase Dashboard > SQL Editor 中整份貼上執行
 -- ==========================================================
@@ -7,7 +7,7 @@
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   provider TEXT NOT NULL DEFAULT 'local',
-  username TEXT UNIQUE NOT NULL,
+  username TEXT NOT NULL,
   name TEXT NOT NULL,
   role TEXT NOT NULL DEFAULT 'student',
   email TEXT,
@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 本地註冊帳號唯一索引
+CREATE UNIQUE INDEX IF NOT EXISTS users_local_username_idx ON users (username) WHERE provider = 'local';
 
 -- 2. 看板資料表 (Boards)
 CREATE TABLE IF NOT EXISTS boards (
