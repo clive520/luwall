@@ -11,6 +11,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       boardId,
+      sectionId,
       title = '',
       content = '',
       authorName,
@@ -25,6 +26,15 @@ export async function POST(request: NextRequest) {
     const board = db.getBoardById(boardId);
     if (!board) {
       return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
+    }
+
+    // 若未指定 sectionId，自動綁定至該看板的第一個主題分欄
+    let effectiveSectionId = sectionId;
+    if (!effectiveSectionId) {
+      const existingSections = db.getSectionsByBoardId(boardId);
+      if (existingSections.length > 0) {
+        effectiveSectionId = existingSections[0].id;
+      }
     }
 
     // 檢查訪客發文權限與暱稱要求
@@ -70,6 +80,7 @@ export async function POST(request: NextRequest) {
     const newPost: Post = {
       id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       boardId,
+      sectionId: effectiveSectionId,
       authorId: user?.id, // 訪客為 undefined
       authorName: displayName,
       isAuthorTeacher: isTeacher,

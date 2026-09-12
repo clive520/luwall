@@ -3,9 +3,9 @@
 import React, { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Board, Post, User } from '@/types';
+import { Board, Post, User, Section } from '@/types';
 import { Navbar } from '@/components/common/Navbar';
-import { StreamView } from '@/components/board/StreamView';
+import { ShelfView } from '@/components/board/ShelfView';
 import { CreatePostModal } from '@/components/board/CreatePostModal';
 import { QRCodeModal } from '@/components/board/QRCodeModal';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
@@ -13,11 +13,10 @@ import {
   QrCode,
   Plus,
   ArrowLeft,
-  Share2,
   ShieldCheck,
   UserCheck,
   Radio,
-  Settings,
+  Layers,
 } from 'lucide-react';
 
 export default function BoardPage({
@@ -29,6 +28,7 @@ export default function BoardPage({
   const router = useRouter();
 
   const [board, setBoard] = useState<Board | null>(null);
+  const [sections, setSections] = useState<Section[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -37,6 +37,7 @@ export default function BoardPage({
 
   // 彈窗狀態
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [activeSectionId, setActiveSectionId] = useState<string | undefined>(undefined);
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
 
@@ -49,6 +50,7 @@ export default function BoardPage({
       }
       const data = await res.json();
       setBoard(data.board);
+      setSections(data.sections || []);
       setPosts(data.posts || []);
       setIsOwner(data.isOwner);
       setCurrentUser(data.currentUser);
@@ -73,13 +75,10 @@ export default function BoardPage({
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'sync' && Array.isArray(data.posts)) {
-          setPosts((prev) => {
-            // 保留正在編輯或審核狀態，更新同步最新清單
-            return data.posts;
-          });
+          setPosts(data.posts);
         }
       } catch {
-        // 忽略非 JSON 心跳
+        // 忽略
       }
     };
 
@@ -94,6 +93,11 @@ export default function BoardPage({
 
   const handlePostDeleted = (postId: string) => {
     setPosts((prev) => prev.filter((p) => p.id !== postId));
+  };
+
+  const handleOpenCreatePost = (sectionId?: string) => {
+    setActiveSectionId(sectionId);
+    setIsCreatePostOpen(true);
   };
 
   if (loading) {
@@ -129,13 +133,13 @@ export default function BoardPage({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
       <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />
 
-      {/* 看板專屬頂部橫幅 */}
+      {/* 看板頂部橫幅 */}
       <div className={`w-full bg-gradient-to-r ${board.coverColor || 'from-emerald-500 to-teal-700'} text-white shadow-md transition-all`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* 標題與說明 */}
             <div className="max-w-2xl">
               <div className="flex items-center gap-2 mb-2">
@@ -146,8 +150,9 @@ export default function BoardPage({
                   <ArrowLeft className="w-3 h-3" />
                   <span>所有看板</span>
                 </Link>
-                <span className="px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-bold backdrop-blur">
-                  串流 Stream
+                <span className="px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-bold backdrop-blur flex items-center gap-1">
+                  <Layers className="w-3 h-3" />
+                  多主題分欄 Shelf
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-400/30 text-emerald-100 text-[11px] font-medium backdrop-blur">
                   <Radio className="w-3 h-3 animate-pulse" />
@@ -155,20 +160,23 @@ export default function BoardPage({
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-xs mb-2">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-xs mb-1.5">
                 {board.title}
               </h1>
 
               {board.description && (
-                <p className="text-sm text-white/90 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
                   {board.description}
                 </p>
               )}
 
               {/* 課堂機制徽章 */}
-              <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px]">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 text-white/90">
                   板主：{board.creatorName}
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
+                  主題分類：{sections.length} 個
                 </span>
                 {board.allowGuest ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
@@ -190,7 +198,7 @@ export default function BoardPage({
             </div>
 
             {/* 操作按鈕群（投影 QR Code、新增卡片） */}
-            <div className="flex flex-wrap items-center gap-2.5 sm:self-end">
+            <div className="flex flex-wrap items-center gap-2 sm:self-end">
               {/* QR Code 投影 */}
               <button
                 onClick={() => setIsQRCodeOpen(true)}
@@ -200,10 +208,10 @@ export default function BoardPage({
                 <span>投影 QR Code 📱</span>
               </button>
 
-              {/* 新增貼文便籤 */}
+              {/* 新增便籤 */}
               <button
-                onClick={() => setIsCreatePostOpen(true)}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-white text-gray-900 hover:bg-amber-50 text-xs font-extrabold shadow-md transition transform active:scale-95"
+                onClick={() => handleOpenCreatePost()}
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-white text-gray-900 hover:bg-amber-50 text-xs font-black shadow-md transition transform active:scale-95"
               >
                 <Plus className="w-4 h-4 text-amber-600" />
                 <span>貼便籤 📝</span>
@@ -213,22 +221,26 @@ export default function BoardPage({
         </div>
       </div>
 
-      {/* 串流內容主體 */}
-      <main className="flex-1">
-        <StreamView
+      {/* 多主題分欄內容主體 */}
+      <main className="flex-1 w-full overflow-x-hidden">
+        <ShelfView
           board={board}
+          sections={sections}
           posts={posts}
           currentUser={currentUser}
           isOwner={isOwner}
-          onOpenCreatePost={() => setIsCreatePostOpen(true)}
+          onOpenCreatePost={handleOpenCreatePost}
           onPostUpdated={handlePostUpdated}
           onPostDeleted={handlePostDeleted}
+          onSectionsUpdated={fetchBoardData}
         />
       </main>
 
       {/* 彈窗元件 */}
       <CreatePostModal
         board={board}
+        sections={sections}
+        defaultSectionId={activeSectionId}
         currentUser={currentUser}
         isOpen={isCreatePostOpen}
         onClose={() => setIsCreatePostOpen(false)}

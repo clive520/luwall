@@ -22,9 +22,11 @@ export async function GET(
   const canManage = isAdmin || (isTeacher && isBoardOwner);
 
   const posts = db.getPostsByBoardId(id, canManage);
+  const sections = db.getSectionsByBoardId(id);
 
   return NextResponse.json({
     board,
+    sections,
     posts,
     isOwner: canManage,
     currentUser: user,

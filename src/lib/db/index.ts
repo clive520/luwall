@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { Board, Post, Comment, Reaction, User, UserRole } from '@/types';
+import { Board, Post, Comment, Reaction, User, UserRole, Section } from '@/types';
 
 // 在 Serverless (Vercel) 環境中，只有 os.tmpdir() 具備讀寫權限
 const DATA_DIR =
@@ -10,6 +10,7 @@ const DATA_DIR =
     : path.join(process.cwd(), '.data');
 
 const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
+const SECTIONS_FILE = path.join(DATA_DIR, 'sections.json');
 const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
@@ -21,6 +22,7 @@ declare global {
   var __luwall_memory_store__:
     | {
         boards?: Board[];
+        sections?: Section[];
         posts?: Post[];
         users?: (User & { passwordHash?: string })[];
         comments?: Comment[];
@@ -115,9 +117,9 @@ function writeJson<T>(file: string, data: T, key: keyof typeof memoryStore) {
 const DEFAULT_BOARD: Board = {
   id: 'demo-stream-board',
   title: '四年甲班・自然觀察與生活筆記 🌿',
-  description: '同學們好！請在這裡分享你在校園角落或家裡觀察到的小植物、小昆蟲，可以上傳照片、錄製 1 分鐘語音介紹，或用文字描述喔！',
+  description: '同學們好！請挑選相應主題分享你在校園或家裡觀察到的小植物、小昆蟲，可上傳照片、錄音或寫下心得！',
   coverColor: 'from-emerald-500 to-teal-700',
-  layoutType: 'stream',
+  layoutType: 'shelf',
   allowGuest: true,
   requireApproval: false,
   reactionType: 'like',
@@ -128,10 +130,36 @@ const DEFAULT_BOARD: Board = {
   updatedAt: new Date().toISOString(),
 };
 
+// 預設三大主題分類
+const DEFAULT_SECTIONS: Section[] = [
+  {
+    id: 'sec-nature-plants',
+    boardId: 'demo-stream-board',
+    title: '校園植物觀察區 🌿',
+    orderIndex: 0,
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'sec-nature-insects',
+    boardId: 'demo-stream-board',
+    title: '昆蟲小天地 🐞',
+    orderIndex: 1,
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+  {
+    id: 'sec-nature-qa',
+    boardId: 'demo-stream-board',
+    title: '心得與提問交流 💬',
+    orderIndex: 2,
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  },
+];
+
 const DEFAULT_POSTS: Post[] = [
   {
     id: 'post-1',
     boardId: 'demo-stream-board',
+    sectionId: 'sec-nature-qa',
     authorId: 'teacher-luyang-001',
     authorName: '林老師（板主）',
     isAuthorTeacher: true,
@@ -152,6 +180,7 @@ const DEFAULT_POSTS: Post[] = [
   {
     id: 'post-2',
     boardId: 'demo-stream-board',
+    sectionId: 'sec-nature-insects',
     authorName: '陳小明 (座號 03)',
     title: '操場角落發現的瓢蟲 🐞',
     content: '今天下課在司令台後面的杜鵑花叢葉子上，看到一隻七星瓢蟲！背上的紅色殼好亮，數一數真的有七個黑點點耶。',
@@ -162,7 +191,7 @@ const DEFAULT_POSTS: Post[] = [
       title: '七星瓢蟲近照',
     },
     status: 'approved',
-    orderIndex: 1,
+    orderIndex: 0,
     likeCount: 8,
     upvotes: 8,
     downvotes: 0,
@@ -175,6 +204,7 @@ const DEFAULT_POSTS: Post[] = [
   {
     id: 'post-3',
     boardId: 'demo-stream-board',
+    sectionId: 'sec-nature-plants',
     authorName: '李小華 (座號 12)',
     title: '校門口的大榕樹氣根 🌳',
     content: '大榕樹的氣根垂下來垂到泥土裡，好像好多條鬍鬚一樣！我查了資料，氣根碰觸到泥土後會慢慢變成粗壯的支柱根喔。',
@@ -188,7 +218,7 @@ const DEFAULT_POSTS: Post[] = [
       },
     },
     status: 'approved',
-    orderIndex: 2,
+    orderIndex: 0,
     likeCount: 3,
     upvotes: 3,
     downvotes: 0,
@@ -213,6 +243,16 @@ export const db = {
     const boards = db.getBoards();
     boards.unshift(board);
     writeJson(BOARDS_FILE, boards, 'boards');
+
+    // 建立新看板時，自動為其產生一個預設主題欄位
+    db.createSection({
+      id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      boardId: board.id,
+      title: '主題討論區 📌',
+      orderIndex: 0,
+      createdAt: new Date().toISOString(),
+    });
+
     return board;
   },
   updateBoard: (id: string, updates: Partial<Board>): Board | undefined => {
@@ -228,6 +268,50 @@ export const db = {
     const filtered = boards.filter((b) => b.id !== id);
     if (filtered.length === boards.length) return false;
     writeJson(BOARDS_FILE, filtered, 'boards');
+    return true;
+  },
+
+  // Sections (主題分欄)
+  getSectionsByBoardId: (boardId: string): Section[] => {
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    const boardSections = allSections
+      .filter((s) => s.boardId === boardId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // 若看板沒有任何主題分欄，自動為其補充一個預設欄位
+    if (boardSections.length === 0) {
+      const defaultSec: Section = {
+        id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        boardId,
+        title: '主題一 📌',
+        orderIndex: 0,
+        createdAt: new Date().toISOString(),
+      };
+      db.createSection(defaultSec);
+      return [defaultSec];
+    }
+
+    return boardSections;
+  },
+  createSection: (section: Section): Section => {
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    allSections.push(section);
+    writeJson(SECTIONS_FILE, allSections, 'sections');
+    return section;
+  },
+  updateSection: (id: string, title: string): Section | undefined => {
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    const idx = allSections.findIndex((s) => s.id === id);
+    if (idx === -1) return undefined;
+    allSections[idx].title = title.trim();
+    writeJson(SECTIONS_FILE, allSections, 'sections');
+    return allSections[idx];
+  },
+  deleteSection: (id: string): boolean => {
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    const filtered = allSections.filter((s) => s.id !== id);
+    if (filtered.length === allSections.length) return false;
+    writeJson(SECTIONS_FILE, filtered, 'sections');
     return true;
   },
 
@@ -268,7 +352,6 @@ export const db = {
   getUsers: (): (User & { passwordHash?: string })[] => {
     const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, DEFAULT_USERS, 'users');
 
-    // 確保超級管理員 admin 永遠存在且具備正確的密碼雜湊
     const adminUser = users.find((u) => u.username === 'admin');
     if (!adminUser) {
       users.unshift(SUPER_ADMIN_USER);

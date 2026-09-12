@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Board, User, MediaAttachment } from '@/types';
+import React, { useState, useEffect } from 'react';
+import { Board, User, MediaAttachment, Section } from '@/types';
 import { AudioRecorder } from '@/components/media/AudioRecorder';
 import {
   X,
@@ -12,10 +12,13 @@ import {
   Loader2,
   AlertCircle,
   Info,
+  Folder,
 } from 'lucide-react';
 
 interface CreatePostModalProps {
   board: Board;
+  sections?: Section[];
+  defaultSectionId?: string;
   currentUser: User | null;
   isOpen: boolean;
   onClose: () => void;
@@ -33,6 +36,8 @@ const PASTEL_COLORS = [
 
 export function CreatePostModal({
   board,
+  sections = [],
+  defaultSectionId,
   currentUser,
   isOpen,
   onClose,
@@ -41,6 +46,7 @@ export function CreatePostModal({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [authorName, setAuthorName] = useState(currentUser?.name || '');
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState('#fef08a');
   const [mediaType, setMediaType] = useState<'none' | 'image' | 'audio' | 'link'>('none');
   const [attachment, setAttachment] = useState<MediaAttachment | undefined>(undefined);
@@ -48,6 +54,14 @@ export function CreatePostModal({
   const [uploadingImage, setUploadingImage] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultSectionId) {
+      setSelectedSectionId(defaultSectionId);
+    } else if (sections.length > 0) {
+      setSelectedSectionId(sections[0].id);
+    }
+  }, [defaultSectionId, sections, isOpen]);
 
   if (!isOpen) return null;
 
@@ -116,7 +130,6 @@ export function CreatePostModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 訪客必須填入暱稱
     if (!currentUser && (!authorName || !authorName.trim())) {
       setError('訪客發表請務必填寫您的姓名或座號暱稱！');
       return;
@@ -136,6 +149,7 @@ export function CreatePostModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           boardId: board.id,
+          sectionId: selectedSectionId || undefined,
           title: title.trim(),
           content: content.trim(),
           authorName: currentUser ? currentUser.name : authorName.trim(),
@@ -180,7 +194,7 @@ export function CreatePostModal({
           張貼至：<span className="font-extrabold">{board.title}</span>
         </p>
 
-        {/* 訪客身分提示 */}
+        {/* 訪客提示 */}
         {!currentUser && (
           <div className="mb-3 p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs text-blue-950 font-bold flex items-center gap-2">
             <Info className="w-4 h-4 shrink-0 text-blue-700" />
@@ -203,7 +217,28 @@ export function CreatePostModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 發文者姓名（未登入時必填）—— 徹底實色高對比 */}
+          {/* 主題分類選擇器（若看板具備多主題） */}
+          {sections.length > 0 && (
+            <div>
+              <label className="block text-xs font-black text-gray-950 mb-1 flex items-center gap-1">
+                <Folder className="w-3.5 h-3.5 text-amber-700" />
+                <span>發布主題分類 *</span>
+              </label>
+              <select
+                value={selectedSectionId}
+                onChange={(e) => setSelectedSectionId(e.target.value)}
+                className="w-full text-sm font-bold bg-white text-gray-950 border-2 border-gray-400 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs"
+              >
+                {sections.map((sec) => (
+                  <option key={sec.id} value={sec.id}>
+                    {sec.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 發文者姓名（未登入時必填） */}
           {!currentUser && (
             <div>
               <label className="block text-xs font-black text-gray-950 mb-1">
@@ -220,7 +255,7 @@ export function CreatePostModal({
             </div>
           )}
 
-          {/* 標題 —— 純白實底高對比極清晰 */}
+          {/* 標題 */}
           <div>
             <label className="block text-xs font-black text-gray-950 mb-1">
               卡片標題（選填）
@@ -234,7 +269,7 @@ export function CreatePostModal({
             />
           </div>
 
-          {/* 內文 —— 純白實底高對比極清晰 */}
+          {/* 內文 */}
           <div>
             <label className="block text-xs font-black text-gray-950 mb-1">
               內容心得 *
