@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/session';
 import { filterProfanity } from '@/lib/profanity';
-import { extractYouTubeId } from '@/lib/media';
+import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
 import { Post } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -62,14 +62,40 @@ export async function POST(request: NextRequest) {
       processedContent = filterProfanity(processedContent);
     }
 
-    // 處理媒體附件
+    // 處理媒體附件 (若未指定附件，但內文或標題包含網址，自動轉為 link 附件)
     let finalAttachment = attachment;
-    if (attachment && attachment.type === 'link' && attachment.url) {
-      const ytId = extractYouTubeId(attachment.url);
+    if (!finalAttachment) {
+      const urlsInContent = findUrls(processedContent);
+      const urlsInTitle = findUrls(processedTitle);
+      const detectedUrl = urlsInContent[0] || urlsInTitle[0];
+      if (detectedUrl) {
+        const ytId = extractYouTubeId(detectedUrl);
+        finalAttachment = {
+          type: 'link',
+          url: detectedUrl,
+          title: ytId ? 'YouTube 影片' : detectedUrl,
+          metadata: ytId
+            ? {
+                youtubeId: ytId,
+                ogImage: getYouTubeThumbnail(ytId),
+              }
+            : undefined,
+        };
+      }
+    } else if (finalAttachment.type === 'link' && finalAttachment.url) {
+      const ytId = extractYouTubeId(finalAttachment.url);
       if (ytId) {
         finalAttachment = {
-          ...attachment,
-          metadata: { ...attachment.metadata, youtubeId: ytId },
+          ...finalAttachment,
+          title:
+            finalAttachment.title && finalAttachment.title !== finalAttachment.url
+              ? finalAttachment.title
+              : 'YouTube 影片',
+          metadata: {
+            ...finalAttachment.metadata,
+            youtubeId: ytId,
+            ogImage: getYouTubeThumbnail(ytId),
+          },
         };
       }
     }
@@ -156,8 +182,22 @@ export async function PATCH(request: NextRequest) {
     if (status) updates.status = status;
     if (title !== undefined) updates.title = title;
     if (content !== undefined) updates.content = content;
-    if (color !== undefined) updates.color = color;
-    if (attachment !== undefined) updates.attachment = attachment;
+    if (attachment !== undefined) {
+      if (attachment && attachment.type === 'link' && attachment.url) {
+        const ytId = extractYouTubeId(attachment.url);
+        if (ytId) {
+          attachment.metadata = {
+            ...attachment.metadata,
+            youtubeId: ytId,
+            ogImage: getYouTubeThumbnail(ytId),
+          };
+          if (!attachment.title || attachment.title === attachment.url) {
+            attachment.title = 'YouTube 影片';
+          }
+        }
+      }
+      updates.attachment = attachment;
+    }
     if (sectionId !== undefined) updates.sectionId = sectionId;
 
     const updated = await db.updatePost(postId, updates);

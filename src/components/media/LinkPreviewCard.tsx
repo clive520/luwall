@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MediaAttachment } from '@/types';
 import { ExternalLink, Play, Globe, X } from 'lucide-react';
-import { getYouTubeThumbnail } from '@/lib/media';
+import { getYouTubeThumbnail, extractYouTubeId } from '@/lib/media';
 
 interface LinkPreviewCardProps {
   attachment: MediaAttachment;
@@ -14,7 +14,42 @@ interface LinkPreviewCardProps {
 export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: LinkPreviewCardProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const metadata = attachment.metadata || {};
-  const youtubeId = metadata.youtubeId;
+  const youtubeId = metadata.youtubeId || extractYouTubeId(attachment.url);
+
+  // 一般網頁動態補抓縮圖 (若發布時未先抓取)
+  const [ogData, setOgData] = useState<{
+    image?: string;
+    title?: string;
+    description?: string;
+    favicon?: string;
+  } | null>(
+    metadata.ogImage || metadata.ogTitle
+      ? {
+          image: metadata.ogImage,
+          title: metadata.ogTitle,
+          description: metadata.ogDescription,
+          favicon: metadata.favicon,
+        }
+      : null
+  );
+
+  useEffect(() => {
+    if (!youtubeId && !metadata.ogImage && !metadata.ogTitle && attachment.url) {
+      fetch(`/api/og?url=${encodeURIComponent(attachment.url)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data && data.success) {
+            setOgData({
+              image: data.image,
+              title: data.title,
+              description: data.description,
+              favicon: data.favicon,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [attachment.url, youtubeId, metadata.ogImage, metadata.ogTitle]);
 
   // 1. YouTube 影片連結卡片
   if (youtubeId) {
@@ -68,7 +103,7 @@ export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: Lin
             </div>
           </div>
 
-          {/* 影片長度或標籤 */}
+          {/* 標籤 */}
           <span className="absolute bottom-2 left-2.5 px-2 py-0.5 rounded-md bg-black/80 text-white text-[10px] font-bold flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
             YouTube 影片
@@ -115,7 +150,11 @@ export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: Lin
   }
 
   // 2. 一般網址縮圖與預覽卡片 (OpenGraph)
-  const hasImage = Boolean(metadata.ogImage);
+  const displayImage = ogData?.image || metadata.ogImage;
+  const displayTitle = ogData?.title || metadata.ogTitle || attachment.title;
+  const displayDesc = ogData?.description || metadata.ogDescription;
+  const displayFavicon = ogData?.favicon || metadata.favicon;
+
   let domain = '';
   try {
     domain = new URL(attachment.url).hostname;
@@ -133,15 +172,14 @@ export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: Lin
         className="block"
       >
         {/* 縮圖（若有擷取到） */}
-        {hasImage && (
+        {displayImage && (
           <div className="relative w-full h-36 bg-gray-100 dark:bg-slate-800 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={metadata.ogImage}
-              alt={attachment.title || '網頁縮圖'}
+              src={displayImage}
+              alt={displayTitle || '網頁縮圖'}
               className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
               onError={(e) => {
-                // 若圖片載入失敗，隱藏該圖片區塊
                 (e.target as HTMLElement).style.display = 'none';
               }}
             />
@@ -151,9 +189,9 @@ export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: Lin
         {/* 內文資訊 */}
         <div className="p-3">
           <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-semibold mb-1">
-            {metadata.favicon ? (
+            {displayFavicon ? (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={metadata.favicon} alt="" className="w-3.5 h-3.5 rounded-xs shrink-0" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} />
+              <img src={displayFavicon} alt="" className="w-3.5 h-3.5 rounded-xs shrink-0" onError={(e) => ((e.target as HTMLElement).style.display = 'none')} />
             ) : (
               <Globe className="w-3.5 h-3.5 shrink-0 text-gray-400" />
             )}
@@ -162,12 +200,12 @@ export function LinkPreviewCard({ attachment, onRemove, canRemove = false }: Lin
           </div>
 
           <h5 className="text-xs font-bold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug group-hover:text-amber-800 dark:group-hover:text-amber-400 transition-colors">
-            {metadata.ogTitle || attachment.title || domain}
+            {displayTitle || domain}
           </h5>
 
-          {metadata.ogDescription && (
+          {displayDesc && (
             <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-1 leading-relaxed">
-              {metadata.ogDescription}
+              {displayDesc}
             </p>
           )}
         </div>

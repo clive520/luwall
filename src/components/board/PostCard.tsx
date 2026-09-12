@@ -5,6 +5,7 @@ import { Post, Comment, User, Section } from '@/types';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { EditPostModal } from '@/components/board/EditPostModal';
+import { findUrls, extractYouTubeId, getYouTubeThumbnail } from '@/lib/media';
 import {
   Heart,
   MessageCircle,
@@ -163,6 +164,24 @@ export function PostCard({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // 自動解析附件：若無 attachment，但 content 中含有網址 (YouTube 或一般連結)，自動作為預覽附件
+  const contentUrls = findUrls(post.content);
+  const effectiveAttachment =
+    post.attachment ||
+    (contentUrls.length > 0
+      ? {
+          type: 'link' as const,
+          url: contentUrls[0],
+          title: extractYouTubeId(contentUrls[0]) ? 'YouTube 影片' : contentUrls[0],
+          metadata: extractYouTubeId(contentUrls[0])
+            ? {
+                youtubeId: extractYouTubeId(contentUrls[0])!,
+                ogImage: getYouTubeThumbnail(extractYouTubeId(contentUrls[0])!),
+              }
+            : undefined,
+        }
+      : null);
+
   return (
     <div
       style={{ backgroundColor: post.color || '#ffffff' }}
@@ -240,36 +259,36 @@ export function PostCard({
         </div>
 
         {/* 多媒體附件區 */}
-        {post.attachment && (
+        {effectiveAttachment && (
           <div className="mt-3.5">
             {/* 圖片 */}
-            {post.attachment.type === 'image' && (
+            {effectiveAttachment.type === 'image' && (
               <div className="rounded-2xl overflow-hidden border border-black/5 bg-black/5">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={post.attachment.url}
-                  alt={post.attachment.title || '貼文照片'}
+                  src={effectiveAttachment.url}
+                  alt={effectiveAttachment.title || '貼文照片'}
                   className="w-full max-h-96 object-cover rounded-2xl transition hover:scale-[1.01]"
                 />
               </div>
             )}
 
             {/* 錄音音訊 */}
-            {post.attachment.type === 'audio' && (
+            {effectiveAttachment.type === 'audio' && (
               <div className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3 border border-black/5">
                 <div className="p-2.5 rounded-full bg-amber-600 text-white shadow-xs">
                   <Volume2 className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-bold text-gray-800 mb-1">語音分享作業</div>
-                  <audio controls src={post.attachment.url} className="w-full h-8" />
+                  <audio controls src={effectiveAttachment.url} className="w-full h-8" />
                 </div>
               </div>
             )}
 
             {/* 外部連結或 YouTube (含縮圖、可點擊與原地播放) */}
-            {post.attachment.type === 'link' && (
-              <LinkPreviewCard attachment={post.attachment} />
+            {effectiveAttachment.type === 'link' && (
+              <LinkPreviewCard attachment={effectiveAttachment} />
             )}
           </div>
         )}

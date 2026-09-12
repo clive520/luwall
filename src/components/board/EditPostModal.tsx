@@ -251,7 +251,33 @@ export function EditPostModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!content.trim() && !title.trim() && !attachment) {
+    // 嘗試從網址輸入框或內容中自動解析網址附件
+    let finalAttachment = attachment;
+    if (!finalAttachment) {
+      const rawUrl = linkInput.trim() || findUrls(content)[0] || findUrls(title)[0];
+      if (rawUrl) {
+        const ytId = extractYouTubeId(rawUrl);
+        if (ytId) {
+          finalAttachment = {
+            type: 'link',
+            url: rawUrl,
+            title: 'YouTube 影片',
+            metadata: {
+              youtubeId: ytId,
+              ogImage: getYouTubeThumbnail(ytId),
+            },
+          };
+        } else {
+          finalAttachment = {
+            type: 'link',
+            url: rawUrl,
+            title: rawUrl,
+          };
+        }
+      }
+    }
+
+    if (!content.trim() && !title.trim() && !finalAttachment) {
       setError('請至少輸入標題、內容或保留多媒體附件');
       return;
     }
@@ -269,7 +295,7 @@ export function EditPostModal({
           content: content.trim(),
           color: selectedColor,
           sectionId: selectedSectionId || undefined,
-          attachment: attachment || null,
+          attachment: finalAttachment || null,
         }),
       });
 
@@ -386,6 +412,15 @@ export function EditPostModal({
                 placeholder="寫下你的觀察、想法或心得，貼入網址將自動顯示縮圖..."
                 value={content}
                 onChange={handleContentChange}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (pasted) {
+                    const urls = findUrls(pasted);
+                    if (urls.length > 0 && (!attachment || attachment.type === 'link')) {
+                      parseAndApplyUrl(urls[0]);
+                    }
+                  }
+                }}
                 className="w-full text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-400 rounded-xl px-3.5 py-3 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs resize-none"
               />
               <p className="text-[11px] text-gray-700 font-medium mt-1">
@@ -485,7 +520,27 @@ export function EditPostModal({
                     type="url"
                     placeholder="貼上 YouTube 影片網址或網頁連結..."
                     value={linkInput}
-                    onChange={(e) => setLinkInput(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setLinkInput(val);
+                      const urls = findUrls(val);
+                      if (urls.length > 0) {
+                        parseAndApplyUrl(urls[0]);
+                      } else if (val.trim().startsWith('http://') || val.trim().startsWith('https://')) {
+                        parseAndApplyUrl(val.trim());
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData('text');
+                      if (pasted) {
+                        const urls = findUrls(pasted);
+                        if (urls.length > 0) {
+                          parseAndApplyUrl(urls[0]);
+                        } else if (pasted.trim().startsWith('http://') || pasted.trim().startsWith('https://')) {
+                          parseAndApplyUrl(pasted.trim());
+                        }
+                      }
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -501,7 +556,7 @@ export function EditPostModal({
                     className="px-3.5 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black shadow-xs flex items-center gap-1"
                   >
                     {loadingLinkPreview ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                    <span>解析縮圖</span>
+                    <span>{loadingLinkPreview ? '解析中...' : '解析縮圖'}</span>
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-600 font-medium">
