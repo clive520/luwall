@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Board, Post, User, Section } from '@/types';
+import { Board, Post, User, Section, MediaAttachment } from '@/types';
 import { Navbar } from '@/components/common/Navbar';
 import { ShelfView } from '@/components/board/ShelfView';
 import { CreatePostModal } from '@/components/board/CreatePostModal';
@@ -42,6 +42,7 @@ export default function BoardPage({
 
   // 彈窗狀態
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [initialAttachment, setInitialAttachment] = useState<MediaAttachment | undefined>(undefined);
   const [activeSectionId, setActiveSectionId] = useState<string | undefined>(undefined);
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
@@ -106,13 +107,14 @@ export default function BoardPage({
     setPosts((prev) => prev.filter((p) => p.id !== postId));
   };
 
-  const handleOpenCreatePost = (sectionId?: string) => {
+  const handleOpenCreatePost = (sectionId?: string, attachment?: MediaAttachment) => {
     if (board && !board.allowGuest && !currentUser) {
       alert('此看板目前設定「需登入帳號才可發表」，請先登入您的帳號！');
       router.push('/login');
       return;
     }
     setActiveSectionId(sectionId);
+    setInitialAttachment(attachment);
     setIsCreatePostOpen(true);
   };
 
@@ -316,9 +318,14 @@ export default function BoardPage({
         board={board}
         sections={sections}
         defaultSectionId={activeSectionId}
+        initialAttachment={initialAttachment}
+        initialMediaType={initialAttachment?.type || 'none'}
         currentUser={currentUser}
         isOpen={isCreatePostOpen}
-        onClose={() => setIsCreatePostOpen(false)}
+        onClose={() => {
+          setIsCreatePostOpen(false);
+          setInitialAttachment(undefined);
+        }}
         onPostCreated={fetchBoardData}
       />
 

@@ -115,7 +115,7 @@ export async function PATCH(request: NextRequest) {
     await db.ensureHydrated();
     const user = await getCurrentUser();
     const body = await request.json();
-    const { postId, status, title, content, color } = body;
+    const { postId, status, title, content, color, attachment, sectionId } = body;
 
     if (!postId) {
       return NextResponse.json({ error: '缺少貼文 ID' }, { status: 400 });
@@ -138,8 +138,14 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // 2. 若是編輯貼文內容 (title, content, color)
-    if (title !== undefined || content !== undefined || color !== undefined) {
+    // 2. 若是編輯貼文內容 (title, content, color, attachment, sectionId)
+    if (
+      title !== undefined ||
+      content !== undefined ||
+      color !== undefined ||
+      attachment !== undefined ||
+      sectionId !== undefined
+    ) {
       // 訪客不能編輯任何內容；學生只能編輯自己發表的貼文；教師/管理員可管理
       if (!isAdmin && !isBoardOwner && !isAuthor) {
         return NextResponse.json({ error: '權限不足：您只能編輯自己發表的貼文' }, { status: 403 });
@@ -151,6 +157,8 @@ export async function PATCH(request: NextRequest) {
     if (title !== undefined) updates.title = title;
     if (content !== undefined) updates.content = content;
     if (color !== undefined) updates.color = color;
+    if (attachment !== undefined) updates.attachment = attachment;
+    if (sectionId !== undefined) updates.sectionId = sectionId;
 
     const updated = await db.updatePost(postId, updates);
     return NextResponse.json({ success: true, post: updated });

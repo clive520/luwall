@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Board, Post, User, Section } from '@/types';
+import { Board, Post, User, Section, MediaAttachment } from '@/types';
 import { PostCard } from './PostCard';
 import {
   Plus,
@@ -14,6 +14,8 @@ import {
   FolderPlus,
   Clock,
   Filter,
+  UploadCloud,
+  Loader2,
 } from 'lucide-react';
 
 interface ShelfViewProps {
@@ -22,7 +24,7 @@ interface ShelfViewProps {
   posts: Post[];
   currentUser: User | null;
   isOwner: boolean;
-  onOpenCreatePost: (sectionId?: string) => void;
+  onOpenCreatePost: (sectionId?: string, initialAttachment?: MediaAttachment) => void;
   onPostUpdated: (post: Post) => void;
   onPostDeleted: (postId: string) => void;
   onSectionsUpdated: () => void;
@@ -45,6 +47,58 @@ export function ShelfView({
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [submittingSection, setSubmittingSection] = useState(false);
+  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
+  const [uploadingSectionId, setUploadingSectionId] = useState<string | null>(null);
+
+  // 拖曳照片至主題欄位自動上傳並開啟發文
+  const handleDropOnSection = async (sectionId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverSectionId(null);
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      alert('請拖曳圖片檔案（支援 JPG、PNG、WebP、GIF 等）');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('圖片大小不能超過 5MB');
+      return;
+    }
+
+    setUploadingSectionId(sectionId);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'image');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '圖片上傳失敗');
+      }
+
+      const attachment: MediaAttachment = {
+        type: 'image',
+        url: data.url,
+        title: file.name,
+      };
+
+      onOpenCreatePost(sectionId, attachment);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '上傳失敗';
+      alert(msg);
+    } finally {
+      setUploadingSectionId(null);
+    }
+  };
 
   const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
   const pendingCount = posts.filter((p) => p.status === 'pending').length;
@@ -137,11 +191,49 @@ export function ShelfView({
             .filter((p) => (p.sectionId === section.id || (!p.sectionId && section.orderIndex === 0)))
             .filter((p) => (filterPendingOnly ? p.status === 'pending' : true));
 
+          const isColumnDragging = dragOverSectionId === section.id;
+          const isColumnUploading = uploadingSectionId === section.id;
+
           return (
             <div
               key={section.id}
-              className="w-76 sm:w-84 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-3xl border border-gray-200/80 dark:border-slate-800 shadow-xs flex flex-col transition-all"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOverSectionId(section.id);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                setDragOverSectionId(null);
+              }}
+              onDrop={(e) => handleDropOnSection(section.id, e)}
+              className={`w-76 sm:w-84 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-3xl border shadow-xs flex flex-col transition-all relative overflow-hidden ${
+                isColumnDragging
+                  ? 'border-amber-500 ring-4 ring-amber-300/60 scale-[1.01]'
+                  : 'border-gray-200/80 dark:border-slate-800'
+              }`}
             >
+              {/* 拖曳圖片覆蓋提示 */}
+              {(isColumnDragging || isColumnUploading) && (
+                <div className="absolute inset-0 z-30 bg-amber-500/90 text-white flex flex-col items-center justify-center p-4 text-center backdrop-blur-xs border-4 border-dashed border-white rounded-3xl animate-pulse pointer-events-none">
+                  {isColumnUploading ? (
+                    <>
+                      <Loader2 className="w-12 h-12 mb-2 animate-spin" />
+                      <p className="text-sm font-black">正在上傳照片中...</p>
+                      <p className="text-[11px] text-white/90 mt-1">上傳完成後將自動為您開啟便籤編輯！</p>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-12 h-12 mb-2" />
+                      <p className="text-sm font-black">放開滑鼠以在此主題貼上照片 📸</p>
+                      <p className="text-[11px] text-white/90 mt-1">將自動上傳照片並開啟便籤</p>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* 欄位頭部（主題標題與新增便籤按鈕，吸頂維持可見） */}
               <div className="sticky top-2 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-t-3xl border-b border-gray-100 dark:border-slate-800 shadow-2xs">
                 <div className="p-4 flex items-center justify-between gap-2">
@@ -221,13 +313,14 @@ export function ShelfView({
                 {sectionPosts.length === 0 ? (
                   <div className="text-center py-10 text-gray-400 dark:text-gray-500 text-xs font-medium">
                     此主題尚無便籤，<br />
-                    點擊上方按鈕張貼第一張！
+                    點擊上方按鈕或拖曳照片張貼第一張！
                   </div>
                 ) : (
                   sectionPosts.map((post) => (
                     <PostCard
                       key={post.id}
                       post={post}
+                      sections={sections}
                       currentUser={currentUser}
                       isOwner={isOwner}
                       onPostUpdated={onPostUpdated}

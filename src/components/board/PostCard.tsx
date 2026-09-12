@@ -1,7 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Post, Comment, User } from '@/types';
+import { Post, Comment, User, Section } from '@/types';
+import { LinkifiedText } from '@/components/common/LinkifiedText';
+import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
+import { EditPostModal } from '@/components/board/EditPostModal';
 import {
   Heart,
   MessageCircle,
@@ -13,10 +16,12 @@ import {
   Send,
   Sparkles,
   Crown,
+  Edit2,
 } from 'lucide-react';
 
 interface PostCardProps {
   post: Post;
+  sections?: Section[];
   currentUser: User | null;
   isOwner: boolean; // 看板擁有者 (教師或管理員)
   onPostUpdated: (updatedPost: Post) => void;
@@ -25,11 +30,13 @@ interface PostCardProps {
 
 export function PostCard({
   post,
+  sections,
   currentUser,
   isOwner,
   onPostUpdated,
   onPostDeleted,
 }: PostCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -49,6 +56,7 @@ export function PostCard({
   // 3. 看板教師：可刪除看板內所有卡片 (isOwner)
   // 4. 管理員：全域可刪除 (isAdmin)
   const canDelete = isAdmin || isOwner || isAuthor;
+  const canEdit = isAdmin || isOwner || isAuthor;
 
   // 點讚
   const handleLike = async () => {
@@ -200,6 +208,15 @@ export function PostCard({
 
           {/* 右上角操作選單 (僅符合身分權限者可見) */}
           <div className="flex items-center gap-1">
+            {canEdit && (
+              <button
+                onClick={() => setIsEditing(true)}
+                title="編輯便籤內容"
+                className="opacity-60 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-amber-600 hover:bg-black/5 rounded-lg transition"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
             {canDelete && (
               <button
                 onClick={handleDelete}
@@ -212,32 +229,34 @@ export function PostCard({
           </div>
         </div>
 
-        {/* 標題與內文 */}
+        {/* 標題與內文 (支援網址自動超連結化) */}
         {post.title && (
           <h4 className="text-base sm:text-lg font-black text-gray-950 mb-1.5 leading-snug">
             {post.title}
           </h4>
         )}
         <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed break-words font-medium">
-          {post.content}
+          <LinkifiedText text={post.content} />
         </div>
 
         {/* 多媒體附件區 */}
         {post.attachment && (
-          <div className="mt-3.5 rounded-2xl overflow-hidden border border-black/5 bg-black/5">
+          <div className="mt-3.5">
             {/* 圖片 */}
             {post.attachment.type === 'image' && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={post.attachment.url}
-                alt={post.attachment.title || '貼文照片'}
-                className="w-full max-h-96 object-cover rounded-2xl transition hover:scale-[1.01]"
-              />
+              <div className="rounded-2xl overflow-hidden border border-black/5 bg-black/5">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={post.attachment.url}
+                  alt={post.attachment.title || '貼文照片'}
+                  className="w-full max-h-96 object-cover rounded-2xl transition hover:scale-[1.01]"
+                />
+              </div>
             )}
 
             {/* 錄音音訊 */}
             {post.attachment.type === 'audio' && (
-              <div className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3">
+              <div className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3 border border-black/5">
                 <div className="p-2.5 rounded-full bg-amber-600 text-white shadow-xs">
                   <Volume2 className="w-5 h-5" />
                 </div>
@@ -248,30 +267,9 @@ export function PostCard({
               </div>
             )}
 
-            {/* YouTube 影片嵌入 */}
-            {post.attachment.type === 'link' && post.attachment.metadata?.youtubeId && (
-              <div className="aspect-video w-full">
-                <iframe
-                  src={`https://www.youtube.com/embed/${post.attachment.metadata.youtubeId}`}
-                  title={post.attachment.title || 'YouTube Video'}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full border-0"
-                />
-              </div>
-            )}
-
-            {/* 一般外部連結 */}
-            {post.attachment.type === 'link' && !post.attachment.metadata?.youtubeId && (
-              <a
-                href={post.attachment.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-3 bg-white/80 hover:bg-white flex items-center justify-between text-xs font-semibold text-blue-700 transition"
-              >
-                <span className="truncate">{post.attachment.title || post.attachment.url}</span>
-                <ExternalLink className="w-4 h-4 shrink-0 ml-2" />
-              </a>
+            {/* 外部連結或 YouTube (含縮圖、可點擊與原地播放) */}
+            {post.attachment.type === 'link' && (
+              <LinkPreviewCard attachment={post.attachment} />
             )}
           </div>
         )}
@@ -371,6 +369,20 @@ export function PostCard({
             </div>
           </form>
         </div>
+      )}
+
+      {/* 編輯便籤彈窗 */}
+      {isEditing && (
+        <EditPostModal
+          post={post}
+          sections={sections}
+          isOpen={isEditing}
+          onClose={() => setIsEditing(false)}
+          onPostUpdated={(updated) => {
+            setIsEditing(false);
+            onPostUpdated(updated);
+          }}
+        />
       )}
     </div>
   );

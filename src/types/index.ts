@@ -57,6 +57,10 @@ export interface MediaAttachment {
     width?: number;
     height?: number;
     youtubeId?: string;
+    ogImage?: string;
+    ogTitle?: string;
+    ogDescription?: string;
+    favicon?: string;
   };
 }
 

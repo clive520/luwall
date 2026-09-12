@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Board, User, MediaAttachment, Section } from '@/types';
+import { Post, Section, MediaAttachment } from '@/types';
 import { AudioRecorder } from '@/components/media/AudioRecorder';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
@@ -10,25 +10,19 @@ import {
   Image as ImageIcon,
   Mic,
   Link as LinkIcon,
-  Send,
+  Save,
   Loader2,
-  AlertCircle,
-  Info,
   Folder,
   UploadCloud,
   Volume2,
 } from 'lucide-react';
 
-interface CreatePostModalProps {
-  board: Board;
+interface EditPostModalProps {
+  post: Post;
   sections?: Section[];
-  defaultSectionId?: string;
-  initialAttachment?: MediaAttachment;
-  initialMediaType?: 'none' | 'image' | 'audio' | 'link';
-  currentUser: User | null;
   isOpen: boolean;
   onClose: () => void;
-  onPostCreated: () => void;
+  onPostUpdated: (updatedPost: Post) => void;
 }
 
 const PASTEL_COLORS = [
@@ -40,25 +34,22 @@ const PASTEL_COLORS = [
   { name: '雪白簡約', value: '#ffffff' },
 ];
 
-export function CreatePostModal({
-  board,
+export function EditPostModal({
+  post,
   sections = [],
-  defaultSectionId,
-  initialAttachment,
-  initialMediaType = 'none',
-  currentUser,
   isOpen,
   onClose,
-  onPostCreated,
-}: CreatePostModalProps) {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [authorName, setAuthorName] = useState(currentUser?.name || '');
-  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
-  const [selectedColor, setSelectedColor] = useState('#fef08a');
-  const [mediaType, setMediaType] = useState<'none' | 'image' | 'audio' | 'link'>(initialMediaType);
-  const [attachment, setAttachment] = useState<MediaAttachment | undefined>(initialAttachment);
-  const [linkInput, setLinkInput] = useState('');
+  onPostUpdated,
+}: EditPostModalProps) {
+  const [title, setTitle] = useState(post.title || '');
+  const [content, setContent] = useState(post.content || '');
+  const [selectedSectionId, setSelectedSectionId] = useState<string>(post.sectionId || '');
+  const [selectedColor, setSelectedColor] = useState(post.color || '#fef08a');
+  const [mediaType, setMediaType] = useState<'none' | 'image' | 'audio' | 'link'>(
+    post.attachment?.type || 'none'
+  );
+  const [attachment, setAttachment] = useState<MediaAttachment | undefined>(post.attachment);
+  const [linkInput, setLinkInput] = useState(post.attachment?.type === 'link' ? post.attachment.url : '');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [loadingLinkPreview, setLoadingLinkPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -66,16 +57,15 @@ export function CreatePostModal({
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
   useEffect(() => {
-    if (defaultSectionId) {
-      setSelectedSectionId(defaultSectionId);
-    } else if (sections.length > 0) {
-      setSelectedSectionId(sections[0].id);
-    }
-    if (initialAttachment) {
-      setAttachment(initialAttachment);
-      setMediaType(initialMediaType || 'image');
-    }
-  }, [defaultSectionId, sections, initialAttachment, initialMediaType, isOpen]);
+    setTitle(post.title || '');
+    setContent(post.content || '');
+    setSelectedSectionId(post.sectionId || (sections[0]?.id ?? ''));
+    setSelectedColor(post.color || '#fef08a');
+    setAttachment(post.attachment);
+    setMediaType(post.attachment?.type || 'none');
+    setLinkInput(post.attachment?.type === 'link' ? post.attachment.url : '');
+    setError(null);
+  }, [post, sections, isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -89,7 +79,7 @@ export function CreatePostModal({
 
   if (!isOpen) return null;
 
-  // 上傳圖片處理核心邏輯 (支援拖曳、剪貼簿與檔案選擇)
+  // 統一檔案上傳邏輯 (支援拖曳與按鈕選擇)
   const uploadImageFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setError('請選擇圖片檔案（支援 JPG、PNG、WebP、GIF 等）');
@@ -130,7 +120,7 @@ export function CreatePostModal({
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) await uploadImageFile(file);
   };
@@ -159,7 +149,7 @@ export function CreatePostModal({
     }
   };
 
-  // 剪貼簿 Ctrl+V 貼上圖片
+  // 貼上事件 (Ctrl+V 支援直接貼上截圖照片)
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -233,11 +223,12 @@ export function CreatePostModal({
     }
   };
 
-  // 當使用者在內容輸入框輸入時，若偵測到網址且無附件則自動抓取縮圖
+  // 當使用者在內容輸入框貼上或打字時，自動偵測網址
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setContent(val);
 
+    // 若使用者目前尚未指定圖片/錄音，且內文出現了新網址，自動抓取縮圖
     if (!attachment || attachment.type === 'link') {
       const urls = findUrls(val);
       if (urls.length > 0 && urls[0] !== attachment?.url) {
@@ -256,17 +247,12 @@ export function CreatePostModal({
     setMediaType('audio');
   };
 
-  // 送出貼文
+  // 送出更新
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!currentUser && (!authorName || !authorName.trim())) {
-      setError('訪客發表請務必填寫您的姓名或座號暱稱！');
-      return;
-    }
-
     if (!content.trim() && !title.trim() && !attachment) {
-      setError('請至少輸入標題、內容或新增多媒體附件');
+      setError('請至少輸入標題、內容或保留多媒體附件');
       return;
     }
 
@@ -275,28 +261,27 @@ export function CreatePostModal({
 
     try {
       const res = await fetch('/api/posts', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          boardId: board.id,
-          sectionId: selectedSectionId || undefined,
+          postId: post.id,
           title: title.trim(),
           content: content.trim(),
-          authorName: currentUser ? currentUser.name : authorName.trim(),
           color: selectedColor,
-          attachment,
+          sectionId: selectedSectionId || undefined,
+          attachment: attachment || null,
         }),
       });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || '發布失敗');
+        throw new Error(data.error || '更新失敗');
       }
 
-      onPostCreated();
+      onPostUpdated(data.post);
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '發布失敗';
+      const msg = err instanceof Error ? err.message : '更新失敗';
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -318,12 +303,12 @@ export function CreatePostModal({
         onPaste={handlePaste}
         className="rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col shadow-2xl border-2 border-black/20 overflow-hidden relative transition-colors duration-200"
       >
-        {/* 拖曳照片提示覆蓋層 */}
+        {/* 拖曳圖片覆蓋提示層 */}
         {isDraggingFile && (
           <div className="absolute inset-0 z-40 bg-amber-500/90 text-white flex flex-col items-center justify-center p-6 text-center backdrop-blur-xs border-4 border-dashed border-white rounded-3xl animate-pulse pointer-events-none">
             <UploadCloud className="w-16 h-16 mb-2" />
             <p className="text-lg font-black">放開滑鼠立即上傳照片 📸</p>
-            <p className="text-xs text-white/90 mt-1">支援照片直接拖曳或剪貼簿 Ctrl+V 貼上</p>
+            <p className="text-xs text-white/90 mt-1">支援圖片直接拖曳或剪貼簿 Ctrl+V 貼上</p>
           </div>
         )}
 
@@ -331,10 +316,10 @@ export function CreatePostModal({
         <div className="px-5 py-3.5 bg-black/5 border-b border-black/10 flex items-center justify-between shrink-0">
           <div>
             <h3 className="text-base font-black text-gray-950 tracking-tight leading-tight">
-              新增分享便籤 📝
+              編輯便籤 ✏️
             </h3>
             <p className="text-[11px] text-gray-800 font-semibold truncate max-w-xs sm:max-w-sm">
-              張貼至：<span className="font-extrabold">{board.title}</span>
+              作者：<span className="font-extrabold">{post.authorName}</span>
             </p>
           </div>
           <button
@@ -350,22 +335,6 @@ export function CreatePostModal({
         {/* 可滾動表單主體 */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
           <div className="p-5 space-y-4 flex-1">
-            {/* 訪客提示 */}
-            {!currentUser && (
-              <div className="p-2.5 rounded-xl bg-blue-100 border border-blue-300 text-xs text-blue-950 font-bold flex items-center gap-2">
-                <Info className="w-4 h-4 shrink-0 text-blue-700" />
-                <span>您目前為訪客身分，發文後將無法編輯或刪除，請務必填妥暱稱。</span>
-              </div>
-            )}
-
-            {/* 審核提示 */}
-            {board.requireApproval && currentUser?.role !== 'teacher' && currentUser?.role !== 'admin' && (
-              <div className="p-2.5 rounded-xl bg-amber-200/90 border border-amber-400 text-xs text-amber-950 font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-800" />
-                <span>此看板已開啟課堂審核，送出後需經由老師批准才會公開。</span>
-              </div>
-            )}
-
             {error && (
               <div className="p-2.5 rounded-xl bg-red-100 border border-red-300 text-xs text-red-900 font-bold">
                 {error}
@@ -377,7 +346,7 @@ export function CreatePostModal({
               <div>
                 <label className="block text-xs font-black text-gray-950 mb-1 flex items-center gap-1">
                   <Folder className="w-3.5 h-3.5 text-amber-700" />
-                  <span>發布主題分類 *</span>
+                  <span>所屬主題分類</span>
                 </label>
                 <select
                   value={selectedSectionId}
@@ -390,23 +359,6 @@ export function CreatePostModal({
                     </option>
                   ))}
                 </select>
-              </div>
-            )}
-
-            {/* 發文者姓名（未登入時必填） */}
-            {!currentUser && (
-              <div>
-                <label className="block text-xs font-black text-gray-950 mb-1">
-                  你的名字 / 座號暱稱 * (訪客必填)
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={authorName}
-                  onChange={(e) => setAuthorName(e.target.value)}
-                  placeholder="例如：陳大明 05 或 課堂小偵探"
-                  className="w-full text-sm font-bold bg-white text-gray-950 placeholder:text-gray-500 border-2 border-gray-400 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 focus:ring-2 focus:ring-amber-200 shadow-xs"
-                />
               </div>
             )}
 
@@ -474,11 +426,11 @@ export function CreatePostModal({
                   }`}
                 >
                   <ImageIcon className="w-4 h-4" />
-                  <span>{uploadingImage ? '上傳中...' : '拖曳/選擇照片'}</span>
+                  <span>{uploadingImage ? '上傳中...' : '拖曳/更換照片'}</span>
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleImageUpload}
+                    onChange={handleImageSelect}
                     disabled={uploadingImage}
                     className="hidden"
                   />
@@ -495,7 +447,7 @@ export function CreatePostModal({
                   }`}
                 >
                   <Mic className="w-4 h-4" />
-                  <span>語音 (3分鐘)</span>
+                  <span>語音錄音</span>
                 </button>
 
                 {/* 連結按鈕 */}
@@ -553,12 +505,12 @@ export function CreatePostModal({
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-600 font-medium">
-                  💡 貼入 YouTube 連結可直接在便籤內播放，一般網址會自動抓取網頁縮圖！
+                  💡 貼上 YouTube 網址會自動抓取影片縮圖，貼上一般網頁亦會自動抓取網站縮圖！
                 </p>
               </div>
             )}
 
-            {/* 已加入的附件縮圖預覽狀態 */}
+            {/* 附件縮圖與預覽區塊 */}
             {attachment && (
               <div className="space-y-2">
                 <div className="text-xs font-black text-gray-900 flex items-center justify-between">
@@ -611,7 +563,7 @@ export function CreatePostModal({
             )}
           </div>
 
-          {/* 底部固定操作欄 */}
+          {/* 底部操作欄 */}
           <div className="px-5 py-3 bg-black/5 border-t border-black/10 flex items-center justify-end gap-2 shrink-0">
             <button
               type="button"
@@ -628,12 +580,12 @@ export function CreatePostModal({
               {submitting ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>發布中...</span>
+                  <span>儲存中...</span>
                 </>
               ) : (
                 <>
-                  <Send className="w-3.5 h-3.5" />
-                  <span>貼到鹿鳴牆上 📌</span>
+                  <Save className="w-3.5 h-3.5" />
+                  <span>儲存變更 💾</span>
                 </>
               )}
             </button>
