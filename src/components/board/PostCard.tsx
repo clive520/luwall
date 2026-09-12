@@ -1,0 +1,347 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Post, Comment, User } from '@/types';
+import {
+  Heart,
+  MessageCircle,
+  Trash2,
+  CheckCircle2,
+  ExternalLink,
+  Volume2,
+  Clock,
+  Send,
+  Sparkles,
+} from 'lucide-react';
+
+interface PostCardProps {
+  post: Post;
+  currentUser: User | null;
+  isOwner: boolean;
+  onPostUpdated: (updatedPost: Post) => void;
+  onPostDeleted: (postId: string) => void;
+}
+
+export function PostCard({
+  post,
+  currentUser,
+  isOwner,
+  onPostUpdated,
+  onPostDeleted,
+}: PostCardProps) {
+  const [showComments, setShowComments] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [commentAuthor, setCommentAuthor] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+
+  const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+  const canDelete = isTeacher || (currentUser && currentUser.id === post.authorId);
+
+  // 點讚
+  const handleLike = async () => {
+    if (isLiking) return;
+    setIsLiking(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/react`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'like' }),
+      });
+      const data = await res.json();
+      if (res.ok && data.post) {
+        onPostUpdated(data.post);
+      }
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  // 載入留言
+  const loadComments = async () => {
+    if (showComments) {
+      setShowComments(false);
+      return;
+    }
+    setShowComments(true);
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`/api/posts/${post.id}/comments`);
+      const data = await res.json();
+      if (res.ok) {
+        setComments(data.comments || []);
+      }
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  // 送出留言
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    setSubmittingComment(true);
+
+    try {
+      const res = await fetch(`/api/posts/${post.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: newComment,
+          authorName: commentAuthor,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.comment) {
+        setComments((prev) => [...prev, data.comment]);
+        setNewComment('');
+        onPostUpdated({ ...post, commentCount: (post.commentCount || 0) + 1 });
+      }
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  // 教師審核通過
+  const handleApprove = async () => {
+    const res = await fetch('/api/posts', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ postId: post.id, status: 'approved' }),
+    });
+    const data = await res.json();
+    if (res.ok && data.post) {
+      onPostUpdated(data.post);
+    }
+  };
+
+  // 刪除貼文
+  const handleDelete = async () => {
+    if (!confirm('確定要刪除這則貼文嗎？')) return;
+    const res = await fetch(`/api/posts?postId=${post.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      onPostDeleted(post.id);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div
+      style={{ backgroundColor: post.color || '#ffffff' }}
+      className={`rounded-3xl p-5 sm:p-6 shadow-sm hover:shadow-md transition-all duration-200 border border-black/5 relative group flex flex-col justify-between ${
+        post.status === 'pending' ? 'ring-2 ring-amber-400/80' : ''
+      }`}
+    >
+      {/* 待審核標籤 */}
+      {post.status === 'pending' && (
+        <div className="absolute -top-3 left-6 px-3 py-0.5 rounded-full bg-amber-500 text-white text-xs font-bold shadow-xs flex items-center gap-1">
+          <Clock className="w-3 h-3 animate-spin" />
+          <span>待審核中</span>
+        </div>
+      )}
+
+      {/* 卡片頭部 */}
+      <div>
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center font-bold text-sm text-gray-800">
+              {post.authorName.charAt(0)}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+                <span>{post.authorName}</span>
+                {post.isAuthorTeacher && (
+                  <span className="text-[10px] bg-amber-600 text-white px-1.5 py-0.2 rounded-md font-semibold inline-flex items-center gap-0.5">
+                    <Sparkles className="w-2.5 h-2.5" />
+                    教師
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-gray-500 block">
+                {formatDate(post.createdAt)}
+              </span>
+            </div>
+          </div>
+
+          {/* 右上角操作選單 */}
+          <div className="flex items-center gap-1">
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                title="刪除貼文"
+                className="opacity-60 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-600 hover:bg-black/5 rounded-lg transition"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 標題與內文 */}
+        {post.title && (
+          <h4 className="text-base sm:text-lg font-black text-gray-950 mb-1.5 leading-snug">
+            {post.title}
+          </h4>
+        )}
+        <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed break-words font-medium">
+          {post.content}
+        </div>
+
+        {/* 多媒體附件區 */}
+        {post.attachment && (
+          <div className="mt-3.5 rounded-2xl overflow-hidden border border-black/5 bg-black/5">
+            {/* 圖片 */}
+            {post.attachment.type === 'image' && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={post.attachment.url}
+                alt={post.attachment.title || '貼文照片'}
+                className="w-full max-h-96 object-cover rounded-2xl transition hover:scale-[1.01]"
+              />
+            )}
+
+            {/* 錄音音訊 */}
+            {post.attachment.type === 'audio' && (
+              <div className="p-3.5 bg-white/70 backdrop-blur rounded-2xl flex items-center gap-3">
+                <div className="p-2.5 rounded-full bg-amber-600 text-white shadow-xs">
+                  <Volume2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-bold text-gray-800 mb-1">語音分享作業</div>
+                  <audio controls src={post.attachment.url} className="w-full h-8" />
+                </div>
+              </div>
+            )}
+
+            {/* YouTube 影片嵌入 */}
+            {post.attachment.type === 'link' && post.attachment.metadata?.youtubeId && (
+              <div className="aspect-video w-full">
+                <iframe
+                  src={`https://www.youtube.com/embed/${post.attachment.metadata.youtubeId}`}
+                  title={post.attachment.title || 'YouTube Video'}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              </div>
+            )}
+
+            {/* 一般外部連結 */}
+            {post.attachment.type === 'link' && !post.attachment.metadata?.youtubeId && (
+              <a
+                href={post.attachment.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 bg-white/80 hover:bg-white flex items-center justify-between text-xs font-semibold text-blue-700 transition"
+              >
+                <span className="truncate">{post.attachment.title || post.attachment.url}</span>
+                <ExternalLink className="w-4 h-4 shrink-0 ml-2" />
+              </a>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* 審核操作區（若為待審核且是教師） */}
+      {post.status === 'pending' && isTeacher && (
+        <div className="mt-4 p-2.5 bg-amber-100/80 rounded-2xl border border-amber-300 flex items-center justify-between">
+          <span className="text-xs font-bold text-amber-900">
+            學生發表待審核
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleApprove}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>通過發布</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 底部互動列 */}
+      <div className="mt-4 pt-3 border-t border-black/5 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {/* 點讚 */}
+          <button
+            onClick={handleLike}
+            disabled={isLiking}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition ${
+              post.likeCount > 0
+                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                : 'text-gray-600 hover:bg-black/5'
+            }`}
+          >
+            <Heart className={`w-3.5 h-3.5 ${post.likeCount > 0 ? 'fill-red-500 text-red-500' : ''}`} />
+            <span>{post.likeCount > 0 ? post.likeCount : '讚'}</span>
+          </button>
+
+          {/* 留言切換 */}
+          <button
+            onClick={loadComments}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-gray-600 hover:bg-black/5 transition"
+          >
+            <MessageCircle className="w-3.5 h-3.5" />
+            <span>{post.commentCount > 0 ? `${post.commentCount} 則留言` : '留言'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 留言抽屜展開 */}
+      {showComments && (
+        <div className="mt-3 pt-3 border-t border-black/5 space-y-2">
+          {loadingComments ? (
+            <div className="text-xs text-gray-400 text-center py-2">載入留言中...</div>
+          ) : comments.length === 0 ? (
+            <div className="text-xs text-gray-400 text-center py-1">還沒有留言，快來第一個留言吧！</div>
+          ) : (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {comments.map((c) => (
+                <div key={c.id} className="bg-white/80 p-2.5 rounded-xl text-xs shadow-2xs">
+                  <div className="font-bold text-gray-800 mb-0.5">{c.authorName}</div>
+                  <div className="text-gray-700 whitespace-pre-wrap">{c.content}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 留言輸入框 */}
+          <form onSubmit={handleAddComment} className="mt-2 space-y-1.5">
+            {!currentUser && (
+              <input
+                type="text"
+                placeholder="您的暱稱（選填）"
+                value={commentAuthor}
+                onChange={(e) => setCommentAuthor(e.target.value)}
+                className="w-full text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden"
+              />
+            )}
+            <div className="flex gap-1.5">
+              <input
+                type="text"
+                placeholder="寫下你的想法或回饋..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                className="flex-1 text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden focus:border-amber-400"
+              />
+              <button
+                type="submit"
+                disabled={submittingComment || !newComment.trim()}
+                className="p-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white disabled:opacity-50 transition"
+              >
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}

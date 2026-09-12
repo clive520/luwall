@@ -1,0 +1,19 @@
+[
+  {
+    "id": "teacher-luyang-001",
+    "provider": "luyang_sso",
+    "username": "teacher_lin",
+    "name": "林老師",
+    "role": "teacher",
+    "email": "teacher@luyang.edu.tw",
+    "createdAt": "2026-09-12T04:19:17.740Z"
+  },
+  {
+    "id": "2lzvgXNCntzfMI6FCKA9",
+    "provider": "luyang_sso",
+    "username": "test008",
+    "name": "吳睿紘",
+    "role": "student",
+    "createdAt": "2026-09-12T04:29:52.144Z"
+  }
+]

@@ -1,0 +1,278 @@
+import fs from 'fs';
+import path from 'path';
+import { Board, Post, Comment, Reaction, User } from '@/types';
+
+// 資料儲存檔案路徑 (在 .data 目錄下持久化)
+const DATA_DIR = path.join(process.cwd(), '.data');
+const BOARDS_FILE = path.join(DATA_DIR, 'boards.json');
+const POSTS_FILE = path.join(DATA_DIR, 'posts.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
+const REACTIONS_FILE = path.join(DATA_DIR, 'reactions.json');
+
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+function readJson<T>(file: string, defaultData: T): T {
+  ensureDataDir();
+  if (!fs.existsSync(file)) {
+    fs.writeFileSync(file, JSON.stringify(defaultData, null, 2), 'utf-8');
+    return defaultData;
+  }
+  try {
+    const raw = fs.readFileSync(file, 'utf-8');
+    return JSON.parse(raw) as T;
+  } catch {
+    return defaultData;
+  }
+}
+
+function writeJson<T>(file: string, data: T) {
+  ensureDataDir();
+  fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+// 預設示範資料（預先注入一個鹿鳴牆教學串流看板）
+const DEFAULT_USER: User = {
+  id: 'teacher-luyang-001',
+  provider: 'luyang_sso',
+  username: 'teacher_lin',
+  name: '林老師',
+  role: 'teacher',
+  email: 'teacher@luyang.edu.tw',
+  createdAt: new Date().toISOString(),
+};
+
+const DEFAULT_BOARD: Board = {
+  id: 'demo-stream-board',
+  title: '四年甲班・自然觀察與生活筆記 🌿',
+  description: '同學們好！請在這裡分享你在校園角落或家裡觀察到的小植物、小昆蟲，可以上傳照片、錄製 1 分鐘語音介紹，或用文字描述喔！',
+  coverColor: 'from-emerald-500 to-teal-700',
+  layoutType: 'stream',
+  allowGuest: true,
+  requireApproval: false,
+  reactionType: 'like',
+  profanityFilter: true,
+  createdBy: DEFAULT_USER.id,
+  creatorName: DEFAULT_USER.name,
+  createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+const DEFAULT_POSTS: Post[] = [
+  {
+    id: 'post-1',
+    boardId: 'demo-stream-board',
+    authorId: DEFAULT_USER.id,
+    authorName: '林老師（板主）',
+    isAuthorTeacher: true,
+    title: '📢 觀察提示與注意事項',
+    content: '1. 觀察時請愛護大自然，不要隨意折採植物。\n2. 拍照時注意光線。\n3. 大家可以試著使用「錄音」功能，唸出你的觀察心得喔！',
+    color: '#fef08a', // 柔和黃
+    status: 'approved',
+    orderIndex: 0,
+    likeCount: 5,
+    upvotes: 5,
+    downvotes: 0,
+    starAverage: 5,
+    starCount: 1,
+    commentCount: 2,
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'post-2',
+    boardId: 'demo-stream-board',
+    authorName: '陳小明 (座號 03)',
+    title: '操場角落發現的瓢蟲 🐞',
+    content: '今天下課在司令台後面的杜鵑花叢葉子上，看到一隻七星瓢蟲！背上的紅色殼好亮，數一數真的有七個黑點點耶。',
+    color: '#fed7aa', // 柔和橙
+    attachment: {
+      type: 'image',
+      url: 'https://images.unsplash.com/photo-1534067783941-51c9c23ecefd?auto=format&fit=crop&w=600&q=80',
+      title: '七星瓢蟲近照',
+    },
+    status: 'approved',
+    orderIndex: 1,
+    likeCount: 8,
+    upvotes: 8,
+    downvotes: 0,
+    starAverage: 4.8,
+    starCount: 4,
+    commentCount: 1,
+    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'post-3',
+    boardId: 'demo-stream-board',
+    authorName: '李小華 (座號 12)',
+    title: '校門口的大榕樹氣根 🌳',
+    content: '大榕樹的氣根垂下來垂到泥土裡，好像好多條鬍鬚一樣！我查了資料，氣根碰觸到泥土後會慢慢變成粗壯的支柱根喔。',
+    color: '#bbf7d0', // 柔和綠
+    attachment: {
+      type: 'link',
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      title: '榕樹生態短片介紹',
+      metadata: {
+        youtubeId: 'dQw4w9WgXcQ',
+      },
+    },
+    status: 'approved',
+    orderIndex: 2,
+    likeCount: 3,
+    upvotes: 3,
+    downvotes: 0,
+    starAverage: 5,
+    starCount: 2,
+    commentCount: 0,
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export const db = {
+  // Boards
+  getBoards: (): Board[] => {
+    return readJson<Board[]>(BOARDS_FILE, [DEFAULT_BOARD]);
+  },
+  getBoardById: (id: string): Board | undefined => {
+    const boards = db.getBoards();
+    return boards.find((b) => b.id === id);
+  },
+  createBoard: (board: Board): Board => {
+    const boards = db.getBoards();
+    boards.unshift(board);
+    writeJson(BOARDS_FILE, boards);
+    return board;
+  },
+  updateBoard: (id: string, updates: Partial<Board>): Board | undefined => {
+    const boards = db.getBoards();
+    const idx = boards.findIndex((b) => b.id === id);
+    if (idx === -1) return undefined;
+    boards[idx] = { ...boards[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeJson(BOARDS_FILE, boards);
+    return boards[idx];
+  },
+  deleteBoard: (id: string): boolean => {
+    const boards = db.getBoards();
+    const filtered = boards.filter((b) => b.id !== id);
+    if (filtered.length === boards.length) return false;
+    writeJson(BOARDS_FILE, filtered);
+    return true;
+  },
+
+  // Posts
+  getPostsByBoardId: (boardId: string, includePending = false): Post[] => {
+    const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS);
+    return posts
+      .filter((p) => p.boardId === boardId && (includePending || p.status === 'approved'))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+  getPostById: (id: string): Post | undefined => {
+    const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS);
+    return posts.find((p) => p.id === id);
+  },
+  createPost: (post: Post): Post => {
+    const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS);
+    posts.unshift(post);
+    writeJson(POSTS_FILE, posts);
+    return post;
+  },
+  updatePost: (id: string, updates: Partial<Post>): Post | undefined => {
+    const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS);
+    const idx = posts.findIndex((p) => p.id === id);
+    if (idx === -1) return undefined;
+    posts[idx] = { ...posts[idx], ...updates, updatedAt: new Date().toISOString() };
+    writeJson(POSTS_FILE, posts);
+    return posts[idx];
+  },
+  deletePost: (id: string): boolean => {
+    const posts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS);
+    const filtered = posts.filter((p) => p.id !== id);
+    if (filtered.length === posts.length) return false;
+    writeJson(POSTS_FILE, filtered);
+    return true;
+  },
+
+  // Users
+  getUsers: (): User[] => {
+    return readJson<User[]>(USERS_FILE, [DEFAULT_USER]);
+  },
+  getUserById: (id: string): User | undefined => {
+    const users = db.getUsers();
+    return users.find((u) => u.id === id);
+  },
+  getUserByUsername: (username: string): (User & { passwordHash?: string }) | undefined => {
+    const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, [DEFAULT_USER]);
+    return users.find((u) => u.username === username);
+  },
+  saveUser: (user: User & { passwordHash?: string }): User => {
+    const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, [DEFAULT_USER]);
+    const idx = users.findIndex((u) => u.id === user.id);
+    if (idx >= 0) {
+      users[idx] = { ...users[idx], ...user };
+    } else {
+      users.push(user);
+    }
+    writeJson(USERS_FILE, users);
+    return user;
+  },
+
+  // Comments
+  getCommentsByPostId: (postId: string): Comment[] => {
+    const comments = readJson<Comment[]>(COMMENTS_FILE, []);
+    return comments
+      .filter((c) => c.postId === postId)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  },
+  createComment: (comment: Comment): Comment => {
+    const comments = readJson<Comment[]>(COMMENTS_FILE, []);
+    comments.push(comment);
+    writeJson(COMMENTS_FILE, comments);
+
+    // 更新 post commentCount
+    const post = db.getPostById(comment.postId);
+    if (post) {
+      db.updatePost(post.id, { commentCount: (post.commentCount || 0) + 1 });
+    }
+    return comment;
+  },
+
+  // Reactions
+  toggleReaction: (postId: string, userId: string, type: 'like' | 'upvote' | 'downvote' | 'star', value?: number) => {
+    const reactions = readJson<Reaction[]>(REACTIONS_FILE, []);
+    const post = db.getPostById(postId);
+    if (!post) return null;
+
+    const existingIdx = reactions.findIndex((r) => r.postId === postId && r.userId === userId && r.type === type);
+
+    if (existingIdx >= 0) {
+      // 移除反應 (Unlike)
+      reactions.splice(existingIdx, 1);
+      if (type === 'like') {
+        post.likeCount = Math.max(0, (post.likeCount || 0) - 1);
+      }
+    } else {
+      // 新增反應
+      reactions.push({
+        id: `react-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        postId,
+        userId,
+        type,
+        value,
+        createdAt: new Date().toISOString(),
+      });
+      if (type === 'like') {
+        post.likeCount = (post.likeCount || 0) + 1;
+      }
+    }
+
+    writeJson(REACTIONS_FILE, reactions);
+    db.updatePost(postId, post);
+    return post;
+  },
+};

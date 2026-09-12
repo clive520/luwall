@@ -1,0 +1,32 @@
+[
+  {
+    "id": "board-1789187433656-uovdb",
+    "title": "測試看板",
+    "description": "",
+    "coverColor": "from-emerald-500 to-teal-700",
+    "layoutType": "stream",
+    "allowGuest": true,
+    "requireApproval": true,
+    "reactionType": "like",
+    "profanityFilter": true,
+    "createdBy": "2lzvgXNCntzfMI6FCKA9",
+    "creatorName": "吳睿紘",
+    "createdAt": "2026-09-12T04:30:33.656Z",
+    "updatedAt": "2026-09-12T04:30:33.656Z"
+  },
+  {
+    "id": "demo-stream-board",
+    "title": "四年甲班・自然觀察與生活筆記 🌿",
+    "description": "同學們好！請在這裡分享你在校園角落或家裡觀察到的小植物、小昆蟲，可以上傳照片、錄製 1 分鐘語音介紹，或用文字描述喔！",
+    "coverColor": "from-emerald-500 to-teal-700",
+    "layoutType": "stream",
+    "allowGuest": true,
+    "requireApproval": false,
+    "reactionType": "like",
+    "profanityFilter": true,
+    "createdBy": "teacher-luyang-001",
+    "creatorName": "林老師",
+    "createdAt": "2026-09-11T04:19:17.744Z",
+    "updatedAt": "2026-09-12T04:19:17.745Z"
+  }
+]
