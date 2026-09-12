@@ -1,4 +1,4 @@
-﻿import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
 const SUPABASE_KEY =
@@ -25,3 +25,16 @@ export function getSupabase(): SupabaseClient | null {
   }
   return supabaseInstance;
 }
+
+let browserClientInstance: SupabaseClient | null = null;
+
+export function getBrowserSupabase(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return null;
+  if (!browserClientInstance) {
+    browserClientInstance = createClient(url, anonKey);
+  }
+  return browserClientInstance;
+}
+

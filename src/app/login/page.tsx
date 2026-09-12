@@ -4,6 +4,7 @@ import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { User as UserIcon, Lock, Loader2 } from 'lucide-react';
+import { getBrowserSupabase } from '@/lib/supabase/client';
 
 function LoginForm() {
   const router = useRouter();
@@ -25,40 +26,49 @@ function LoginForm() {
       const res = await fetch('/api/auth/local', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', username, password }),
+        body: JSON.stringify({ username, password, action: 'login' }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || '登入失敗');
-      }
+      if (!res.ok) throw new Error(data.error || '登入失敗');
 
       router.push(returnUrl);
       router.refresh();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '登入失敗';
-      setError(msg);
+      setError(err instanceof Error ? err.message : '登入失敗');
     } finally {
       setLoading(false);
     }
   };
 
-  // Google 登入模擬/橋接
+  // Google OAuth 真正登入（透過 Supabase OAuth 連線）
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const res = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: 'teacher.demo@gmail.com',
-          name: '林曉薇 老師 (Google)',
-        }),
-      });
-      if (res.ok) {
-        router.push(returnUrl);
-        router.refresh();
+      const supabase = getBrowserSupabase();
+      if (!supabase) {
+        setError('系統未配置 Google OAuth 憑證，請先使用帳號密碼登入');
+        setLoading(false);
+        return;
       }
-    } finally {
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (oauthError) {
+        setError(oauthError.message || 'Google 登入啟動失敗');
+        setLoading(false);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google 登入連線失敗');
       setLoading(false);
     }
   };
