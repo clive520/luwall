@@ -11,6 +11,7 @@ import { QRCodeModal } from '@/components/board/QRCodeModal';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
 import { BoardSettingsModal } from '@/components/board/BoardSettingsModal';
 import { PostDetailModal } from '@/components/board/PostDetailModal';
+import { ZoomController } from '@/components/board/ZoomController';
 import {
   QrCode,
   Plus,
@@ -49,6 +50,60 @@ export default function BoardPage({
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  // 讀取個人縮放偏好設定
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('luwall_board_zoom');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 50 && parsed <= 150) {
+          setZoomLevel(parsed);
+        }
+      }
+    } catch {
+      // 忽略
+    }
+  }, []);
+
+  const handleZoomChange = (newZoom: number) => {
+    setZoomLevel(newZoom);
+    try {
+      localStorage.setItem('luwall_board_zoom', newZoom.toString());
+    } catch {
+      // 忽略
+    }
+  };
+
+  // 支援 Ctrl + 滑鼠滾輪縮放
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          setZoomLevel((prev) => {
+            const next = Math.min(150, prev + 5);
+            try {
+              localStorage.setItem('luwall_board_zoom', next.toString());
+            } catch {}
+            return next;
+          });
+        } else if (e.deltaY > 0) {
+          setZoomLevel((prev) => {
+            const next = Math.max(50, prev - 5);
+            try {
+              localStorage.setItem('luwall_board_zoom', next.toString());
+            } catch {}
+            return next;
+          });
+        }
+      }
+    };
+
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, []);
 
   // 載入看板資料
   const fetchBoardData = useCallback(async () => {
@@ -305,8 +360,15 @@ export default function BoardPage({
         </div>
       </div>
 
-      {/* 多主題分欄內容主體 */}
-      <main className="flex-1 w-full pb-16">
+      {/* 多主題分欄內容主體（支援比例縮放） */}
+      <main
+        className="flex-1 w-full pb-16 transition-all duration-150 ease-out"
+        style={
+          {
+            zoom: `${zoomLevel}%`,
+          } as React.CSSProperties
+        }
+      >
         <ShelfView
           board={board}
           sections={sections}
@@ -369,6 +431,13 @@ export default function BoardPage({
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         onBoardUpdated={(updatedBoard) => setBoard(updatedBoard)}
+      />
+
+      {/* 看板畫面比例縮放控制器 */}
+      <ZoomController
+        zoom={zoomLevel}
+        onZoomChange={handleZoomChange}
+        onResetZoom={() => handleZoomChange(100)}
       />
     </div>
   );
