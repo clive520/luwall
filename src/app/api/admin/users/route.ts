@@ -56,11 +56,38 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: '找不到該使用者' }, { status: 404 });
     }
 
-    // 防止唯一的管理員降級自己造成系統無管理員
-    if (targetUser.role === 'admin' && role !== 'admin') {
-      const allAdmins = db.getUsers().filter((u) => u.role === 'admin');
-      if (allAdmins.length <= 1) {
-        return NextResponse.json({ error: '無法降級最後一位系統管理員' }, { status: 400 });
+    // 1. 自己不能核定自己的身分
+    if (targetUser.id === operator.id) {
+      return NextResponse.json({ error: '安全限制：自己不能核定或變更自己的身分' }, { status: 403 });
+    }
+
+    // 2. 老師的權限規則：
+    // - 老師不能夠核定系統管理人員的身分
+    // - 老師只能把學生核定為老師
+    if (operator.role === 'teacher') {
+      if (targetUser.role === 'admin' || role === 'admin') {
+        return NextResponse.json(
+          { error: '權限不足：老師不能夠核定系統管理人員的身分' },
+          { status: 403 }
+        );
+      }
+      if (targetUser.role !== 'student' || role !== 'teacher') {
+        return NextResponse.json(
+          { error: '權限不足：老師只能把學生核定為老師' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 3. 系統管理員的權限規則：
+    // - 系統管理人員可以核定老師跟學生的身份
+    // - 防止最後一位管理員被降級
+    if (operator.role === 'admin') {
+      if (targetUser.role === 'admin' && role !== 'admin') {
+        const allAdmins = db.getUsers().filter((u) => u.role === 'admin');
+        if (allAdmins.length <= 1) {
+          return NextResponse.json({ error: '無法降級最後一位系統管理員' }, { status: 400 });
+        }
       }
     }
 

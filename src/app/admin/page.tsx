@@ -258,41 +258,69 @@ export default function AdminPage() {
                       )}
                     </td>
                     <td className="py-3.5 px-3">
-                      <div className="flex items-center gap-1">
+                      {/* 1. 自己不能核定自己的身分 */}
+                      {u.id === currentUser.id ? (
+                        <span className="text-xs text-gray-400 font-medium italic">
+                          本人（無法變更自己的身分）
+                        </span>
+                      ) : !isAdmin && u.role === 'admin' ? (
+                        /* 2. 老師不能夠核定系統管理人員的身分 */
+                        <span className="text-xs text-gray-400 font-medium">
+                          系統管理員（受保護）
+                        </span>
+                      ) : !isAdmin && u.role === 'teacher' ? (
+                        /* 3. 老師只能把學生核定為老師（對已是教師者不顯示變更） */
+                        <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                          已具備教師身分
+                        </span>
+                      ) : !isAdmin && u.role === 'student' ? (
+                        /* 4. 老師只能把學生核定為老師 */
                         <button
-                          disabled={updatingId === u.id || u.role === 'student'}
-                          onClick={() => handleRoleChange(u.id, 'student')}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-                            u.role === 'student'
-                              ? 'bg-blue-600 text-white shadow-2xs'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                          }`}
-                        >
-                          設為學生
-                        </button>
-                        <button
-                          disabled={updatingId === u.id || u.role === 'teacher'}
+                          disabled={updatingId === u.id}
                           onClick={() => handleRoleChange(u.id, 'teacher')}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-                            u.role === 'teacher'
-                              ? 'bg-emerald-600 text-white shadow-2xs'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                          }`}
+                          className="px-3 py-1.5 rounded-xl text-xs font-extrabold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition flex items-center gap-1 disabled:opacity-50"
                         >
-                          核定為教師
+                          <Briefcase className="w-3.5 h-3.5" />
+                          <span>核定為教師</span>
                         </button>
-                        <button
-                          disabled={updatingId === u.id || u.role === 'admin'}
-                          onClick={() => handleRoleChange(u.id, 'admin')}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
-                            u.role === 'admin'
-                              ? 'bg-amber-600 text-white shadow-2xs'
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                          }`}
-                        >
-                          設為管理員
-                        </button>
-                      </div>
+                      ) : (
+                        /* 5. 系統管理人員可以核定老師跟學生的身份 */
+                        <div className="flex items-center gap-1">
+                          <button
+                            disabled={updatingId === u.id || u.role === 'student'}
+                            onClick={() => handleRoleChange(u.id, 'student')}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+                              u.role === 'student'
+                                ? 'bg-blue-600 text-white shadow-2xs'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                            }`}
+                          >
+                            設為學生
+                          </button>
+                          <button
+                            disabled={updatingId === u.id || u.role === 'teacher'}
+                            onClick={() => handleRoleChange(u.id, 'teacher')}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+                              u.role === 'teacher'
+                                ? 'bg-emerald-600 text-white shadow-2xs'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                            }`}
+                          >
+                            核定為教師
+                          </button>
+                          <button
+                            disabled={updatingId === u.id || u.role === 'admin'}
+                            onClick={() => handleRoleChange(u.id, 'admin')}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold transition ${
+                              u.role === 'admin'
+                                ? 'bg-amber-600 text-white shadow-2xs'
+                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                            }`}
+                          >
+                            設為管理員
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-3 text-right">
                       {isAdmin && u.id !== currentUser.id && (
