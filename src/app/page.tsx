@@ -14,7 +14,68 @@ import {
   Layers,
   ShieldCheck,
   UserCheck,
+  Star,
+  Flame,
 } from 'lucide-react';
+
+function BoardCard({ board, isMyBoard }: { board: Board; isMyBoard?: boolean }) {
+  return (
+    <Link
+      href={`/boards/${board.id}`}
+      className="group bg-white rounded-3xl overflow-hidden border border-amber-100/90 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between"
+    >
+      {/* 頂部彩色裝飾條 */}
+      <div className={`h-24 bg-gradient-to-r ${board.coverColor} p-4 text-white flex flex-col justify-between relative`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/20 backdrop-blur">
+              串流 Stream
+            </span>
+            {isMyBoard && (
+              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-amber-400 text-amber-950 flex items-center gap-1 shadow-xs">
+                <Star className="w-2.5 h-2.5 fill-amber-950" />
+                我的看板
+              </span>
+            )}
+          </div>
+          <span className="inline-flex items-center gap-1 text-[10px] text-white/90">
+            <Radio className="w-3 h-3 text-emerald-300 animate-pulse" />
+            即時中
+          </span>
+        </div>
+      </div>
+
+      {/* 內容介紹 */}
+      <div className="p-5 flex-1 flex flex-col justify-between">
+        <div>
+          <h3 className="text-base font-black text-gray-950 group-hover:text-amber-800 transition-colors mb-2 line-clamp-1">
+            {board.title}
+          </h3>
+          <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed mb-4">
+            {board.description || '點擊進入開始課堂即時分享與討論！'}
+          </p>
+        </div>
+
+        {/* 底部屬性標籤 */}
+        <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+          <span className="font-semibold text-gray-700">板主：{board.creatorName}</span>
+          <div className="flex items-center gap-1.5">
+            {board.allowGuest && (
+              <span title="免登入可參與" className="text-emerald-600">
+                <UserCheck className="w-3.5 h-3.5" />
+              </span>
+            )}
+            {board.requireApproval && (
+              <span title="開啟教師審核" className="text-amber-600">
+                <ShieldCheck className="w-3.5 h-3.5" />
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default function HomePage() {
   const [boards, setBoards] = useState<Board[]>([]);
@@ -40,6 +101,9 @@ export default function HomePage() {
       .then((res) => res.json())
       .then((data) => setBoards(data.boards || []));
   };
+
+  const myBoards = currentUser ? boards.filter((b) => b.createdBy === currentUser.id) : [];
+  const popularBoards = boards;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/50 via-white to-amber-50/30 flex flex-col">
@@ -75,7 +139,24 @@ export default function HomePage() {
               </button>
             )}
 
-            {!currentUser ? (
+            {currentUser ? (
+              <>
+                <a
+                  href="#my-boards"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-sm border border-amber-200 shadow-xs transition"
+                >
+                  <Star className="w-4 h-4 text-amber-600 fill-amber-500" />
+                  <span>我的看板 ⭐</span>
+                </a>
+                <a
+                  href="#popular-boards"
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-rose-50 text-rose-900 font-bold text-sm border border-rose-200 shadow-xs transition"
+                >
+                  <Flame className="w-4 h-4 text-rose-600 fill-rose-500" />
+                  <span>熱門看板 🔥</span>
+                </a>
+              </>
+            ) : (
               <>
                 <Link
                   href="/login"
@@ -85,44 +166,104 @@ export default function HomePage() {
                   <span>登入帳號 🪪</span>
                 </Link>
                 <a
-                  href="#board-list"
+                  href="#popular-boards"
                   className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-white hover:bg-amber-50 text-amber-900 font-bold text-sm border border-amber-200 shadow-xs transition"
                 >
-                  <Layers className="w-4 h-4 text-amber-600" />
-                  <span>瀏覽開放看板 👇</span>
+                  <Flame className="w-4 h-4 text-rose-600 fill-rose-500" />
+                  <span>瀏覽熱門看板 👇</span>
                 </a>
               </>
-            ) : currentUser.role === 'student' ? (
-              <a
-                href="#board-list"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-extrabold text-sm shadow-lg shadow-amber-600/20 transition transform active:scale-95"
-              >
-                <Layers className="w-4 h-4" />
-                <span>瀏覽班級看板 📚</span>
-              </a>
-            ) : null}
+            )}
           </div>
         </div>
       </section>
 
-      {/* 看板大廳區塊 */}
-      <section id="board-list" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <Layers className="w-5 h-5 text-amber-700" />
-            <h2 className="text-xl font-black text-gray-900">課堂熱門看板</h2>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800">
-              {boards.length} 面
-            </span>
+      {/* 登入後專屬區塊：我的看板 */}
+      {currentUser && (
+        <section id="my-boards" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-4 w-full">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                <Star className="w-5 h-5 fill-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-black text-gray-900">我的看板</h2>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                    {myBoards.length} 面
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">您建立與管理的專屬教學協作看板</p>
+              </div>
+            </div>
+
+            {(currentUser.role === 'teacher' || currentUser.role === 'admin') && (
+              <button
+                onClick={() => setIsCreateBoardOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 shadow-xs transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>新增看板</span>
+              </button>
+            )}
           </div>
 
-          <button
-            onClick={() => setIsCreateBoardOpen(true)}
-            className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 hover:text-amber-800 transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>新增看板</span>
-          </button>
+          {loading ? (
+            <div className="text-center py-12 text-gray-400 text-sm font-medium">
+              讀取我的看板中...
+            </div>
+          ) : myBoards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myBoards.map((b) => (
+                <BoardCard key={b.id} board={b} isMyBoard={true} />
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-3xl border-2 border-dashed border-amber-200/90 p-8 text-center shadow-2xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3 text-2xl">
+                📋
+              </div>
+              <h3 className="text-sm font-bold text-gray-800 mb-1">
+                {currentUser.role === 'student'
+                  ? '您目前尚未建立個人看板'
+                  : '您尚未建立任何看板'}
+              </h3>
+              <p className="text-xs text-gray-500 max-w-md mx-auto mb-4 leading-relaxed">
+                {currentUser.role === 'student'
+                  ? '目前學生身分無需開板，您可以直接前往下方「熱門看板」參與全班討論與互動！若有課堂開板需求可向教師申請。'
+                  : '您可以開立專屬的班級看板，設定免登入發文、錄音或審核模式，讓全班學生一秒掃碼加入！'}
+              </p>
+              {(currentUser.role === 'teacher' || currentUser.role === 'admin') && (
+                <button
+                  onClick={() => setIsCreateBoardOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>立即建立第一個看板</span>
+                </button>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 熱門看板區塊 */}
+      <section id="popular-boards" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+              <Flame className="w-5 h-5 fill-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-black text-gray-900">熱門看板</h2>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                  {popularBoards.length} 面
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-0.5">全校公開精選課堂與即時熱門看板</p>
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -131,54 +272,12 @@ export default function HomePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {boards.map((b) => (
-              <Link
+            {popularBoards.map((b) => (
+              <BoardCard
                 key={b.id}
-                href={`/boards/${b.id}`}
-                className="group bg-white rounded-3xl overflow-hidden border border-amber-100 shadow-xs hover:shadow-xl hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between"
-              >
-                {/* 頂部彩色裝飾條 */}
-                <div className={`h-24 bg-gradient-to-r ${b.coverColor} p-4 text-white flex flex-col justify-between`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/20 backdrop-blur">
-                      串流 Stream
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] text-white/90">
-                      <Radio className="w-3 h-3 text-emerald-300 animate-pulse" />
-                      即時中
-                    </span>
-                  </div>
-                </div>
-
-                {/* 內容介紹 */}
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-base font-black text-gray-950 group-hover:text-amber-800 transition-colors mb-2 line-clamp-1">
-                      {b.title}
-                    </h3>
-                    <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed mb-4">
-                      {b.description || '點擊進入開始課堂即時分享與討論！'}
-                    </p>
-                  </div>
-
-                  {/* 底部屬性標籤 */}
-                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-                    <span className="font-semibold text-gray-700">板主：{b.creatorName}</span>
-                    <div className="flex items-center gap-1.5">
-                      {b.allowGuest && (
-                        <span title="免登入可參與" className="text-emerald-600">
-                          <UserCheck className="w-3.5 h-3.5" />
-                        </span>
-                      )}
-                      {b.requireApproval && (
-                        <span title="開啟教師審核" className="text-amber-600">
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </Link>
+                board={b}
+                isMyBoard={currentUser ? currentUser.id === b.createdBy : false}
+              />
             ))}
           </div>
         )}
