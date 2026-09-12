@@ -11,6 +11,15 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
+
+    // 嚴格權限檢查：僅教師與系統管理員可建立看板
+    if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
+      return NextResponse.json(
+        { error: '權限不足：僅教師與系統管理員具備開立看板的權限' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       title,
@@ -37,8 +46,8 @@ export async function POST(request: NextRequest) {
       requireApproval: Boolean(requireApproval),
       reactionType,
       profanityFilter: Boolean(profanityFilter),
-      createdBy: user?.id || 'guest-teacher',
-      creatorName: user?.name || '鹿陽老師',
+      createdBy: user.id,
+      creatorName: user.name,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -1,4 +1,4 @@
-export type UserRole = 'student' | 'teacher' | 'admin';
+export type UserRole = 'admin' | 'teacher' | 'student' | 'guest';
 
 export type AuthProvider = 'luyang_sso' | 'google' | 'local';
 

@@ -27,14 +27,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '找不到此看板' }, { status: 404 });
     }
 
-    // 檢查訪客權限
-    if (!user && !board.allowGuest) {
-      return NextResponse.json({ error: '此看板限定登入後方可發表內容' }, { status: 403 });
+    // 檢查訪客發文權限與暱稱要求
+    if (!user) {
+      if (!board.allowGuest) {
+        return NextResponse.json({ error: '此看板限定登入後方可發表內容' }, { status: 403 });
+      }
+      if (!authorName || !authorName.trim()) {
+        return NextResponse.json({ error: '訪客發表必須填寫暱稱或座號' }, { status: 400 });
+      }
     }
 
-    // 發布者姓名：優先取登入者真實姓名，否則取訪客填寫或預設匿名
-    const displayName = user ? user.name : (authorName && authorName.trim() ? authorName.trim() : '匿名學生');
-    const isTeacher = user?.role === 'teacher' || user?.role === 'admin';
+    const displayName = user ? user.name : authorName.trim();
+    const isAdmin = user?.role === 'admin';
+    const isBoardOwner = user?.id === board.createdBy;
+    const isTeacher = user?.role === 'teacher' || isAdmin;
 
     // 不雅詞過濾
     let processedTitle = title.trim();
@@ -45,7 +51,7 @@ export async function POST(request: NextRequest) {
       processedContent = filterProfanity(processedContent);
     }
 
-    // 處理媒體附件 (若為 YouTube 連結自動提取 ID)
+    // 處理媒體附件
     let finalAttachment = attachment;
     if (attachment && attachment.type === 'link' && attachment.url) {
       const ytId = extractYouTubeId(attachment.url);
@@ -57,13 +63,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 審核狀態：若是老師本人發布，或看板未開啟審核，則直接 approved
-    const status = board.requireApproval && !isTeacher ? 'pending' : 'approved';
+    // 審核狀態：管理員或該看板老師發文免審核；學生與訪客依看板 requireApproval 決定
+    const canBypassApproval = isAdmin || isBoardOwner;
+    const status = board.requireApproval && !canBypassApproval ? 'pending' : 'approved';
 
     const newPost: Post = {
       id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       boardId,
-      authorId: user?.id,
+      authorId: user?.id, // 訪客為 undefined
       authorName: displayName,
       isAuthorTeacher: isTeacher,
       title: processedTitle,
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// 審核或更新貼文狀態
+// 編輯貼文內容或審核狀態
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -107,11 +114,23 @@ export async function PATCH(request: NextRequest) {
     }
 
     const board = db.getBoardById(post.boardId);
-    const isTeacher = user?.role === 'teacher' || user?.role === 'admin' || user?.id === board?.createdBy;
+    const isAdmin = user?.role === 'admin';
+    const isBoardOwner = user?.id === board?.createdBy;
+    const isAuthor = user && user.id === post.authorId;
 
-    // 若要審核狀態，必須是板主或老師
-    if (status && !isTeacher) {
-      return NextResponse.json({ error: '您沒有審核此貼文的權限' }, { status: 403 });
+    // 1. 若是審核狀態變更 (status)
+    if (status) {
+      if (!isAdmin && !isBoardOwner) {
+        return NextResponse.json({ error: '權限不足：僅看板教師或系統管理員可審核貼文' }, { status: 403 });
+      }
+    }
+
+    // 2. 若是編輯貼文內容 (title, content, color)
+    if (title !== undefined || content !== undefined || color !== undefined) {
+      // 訪客不能編輯任何內容；學生只能編輯自己發表的貼文；教師/管理員可管理
+      if (!isAdmin && !isBoardOwner && !isAuthor) {
+        return NextResponse.json({ error: '權限不足：您只能編輯自己發表的貼文' }, { status: 403 });
+      }
     }
 
     const updates: Partial<Post> = {};
@@ -128,6 +147,7 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+// 刪除貼文
 export async function DELETE(request: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -143,12 +163,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: '找不到此貼文' }, { status: 404 });
     }
 
-    const board = db.getBoardById(post.boardId);
-    const isTeacher = user?.role === 'teacher' || user?.role === 'admin' || user?.id === board?.createdBy;
-    const isAuthor = user && user.id === post.authorId;
+    // 訪客（未登入者）嚴格禁止刪除任何貼文
+    if (!user) {
+      return NextResponse.json({ error: '訪客無權限刪除貼文，如需處理請聯絡板主老師' }, { status: 403 });
+    }
 
-    if (!isTeacher && !isAuthor) {
-      return NextResponse.json({ error: '您沒有刪除此貼文的權限' }, { status: 403 });
+    const board = db.getBoardById(post.boardId);
+    const isAdmin = user.role === 'admin';
+    const isBoardOwner = user.id === board?.createdBy;
+    const isAuthor = user.id === post.authorId;
+
+    // 權限檢查：
+    // - 系統管理員：全域可刪
+    // - 看板教師：可刪自己看板內任何文章（含學生的）
+    // - 學生：只能刪除自己發表的文章
+    if (!isAdmin && !isBoardOwner && !isAuthor) {
+      return NextResponse.json({ error: '權限不足：您只能刪除自己發表的貼文' }, { status: 403 });
     }
 
     db.deletePost(postId);

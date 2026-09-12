@@ -11,6 +11,7 @@ import {
   Send,
   Loader2,
   AlertCircle,
+  Info,
 } from 'lucide-react';
 
 interface CreatePostModalProps {
@@ -114,6 +115,13 @@ export function CreatePostModal({
   // 送出貼文
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 訪客必須填入暱稱
+    if (!currentUser && (!authorName || !authorName.trim())) {
+      setError('訪客發表請務必填寫您的姓名或座號暱稱！');
+      return;
+    }
+
     if (!content.trim() && !title.trim() && !attachment) {
       setError('請至少輸入標題、內容或新增多媒體附件');
       return;
@@ -130,7 +138,7 @@ export function CreatePostModal({
           boardId: board.id,
           title: title.trim(),
           content: content.trim(),
-          authorName: currentUser ? currentUser.name : authorName.trim() || '匿名學生',
+          authorName: currentUser ? currentUser.name : authorName.trim(),
           color: selectedColor,
           attachment,
         }),
@@ -167,12 +175,21 @@ export function CreatePostModal({
         <h3 className="text-xl font-extrabold text-gray-950 mb-1">
           新增分享便籤 📝
         </h3>
-        <p className="text-xs text-gray-600 mb-4">
+        <p className="text-xs text-gray-600 mb-3">
           張貼至：<span className="font-semibold">{board.title}</span>
         </p>
 
-        {board.requireApproval && currentUser?.role !== 'teacher' && (
-          <div className="mb-4 p-2.5 rounded-xl bg-amber-200/60 border border-amber-300 text-xs text-amber-900 flex items-center gap-2">
+        {/* 訪客身分提示 */}
+        {!currentUser && (
+          <div className="mb-3 p-2.5 rounded-xl bg-blue-100/70 border border-blue-200 text-xs text-blue-900 flex items-center gap-2">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>您目前為訪客身分，發文後將無法編輯或刪除，請務必填妥暱稱。</span>
+          </div>
+        )}
+
+        {/* 審核提示 */}
+        {board.requireApproval && currentUser?.role !== 'teacher' && currentUser?.role !== 'admin' && (
+          <div className="mb-3 p-2.5 rounded-xl bg-amber-200/60 border border-amber-300 text-xs text-amber-900 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>此看板已開啟課堂審核，送出後需經由老師批准才會公開。</span>
           </div>
@@ -185,18 +202,19 @@ export function CreatePostModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* 發文者姓名（未登入時可填寫） */}
+          {/* 發文者姓名（未登入時必填） */}
           {!currentUser && (
             <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                你的名字 / 座號（如：陳大明 05）
+              <label className="block text-xs font-bold text-gray-800 mb-1">
+                你的名字 / 座號暱稱 *
               </label>
               <input
                 type="text"
+                required
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
-                placeholder="留空將顯示為「匿名學生」"
-                className="w-full text-sm bg-white/80 border border-black/10 rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-amber-500/50"
+                placeholder="例如：陳大明 05 或 課堂小偵探"
+                className="w-full text-sm bg-white/90 border border-black/10 rounded-xl px-3.5 py-2 outline-hidden focus:ring-2 focus:ring-amber-500/50"
               />
             </div>
           )}

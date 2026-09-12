@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { Board, Post, Comment, Reaction, User } from '@/types';
+import { Board, Post, Comment, Reaction, User, UserRole } from '@/types';
 
 // 在 Serverless (Vercel) 環境中，只有 os.tmpdir() 具備讀寫權限
 const DATA_DIR =
@@ -15,7 +15,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const COMMENTS_FILE = path.join(DATA_DIR, 'comments.json');
 const REACTIONS_FILE = path.join(DATA_DIR, 'reactions.json');
 
-// 全域記憶體快取 (跨熱重載與防止磁碟異常)
+// 全域記憶體快取
 declare global {
   // eslint-disable-next-line no-var
   var __luwall_memory_store__:
@@ -40,12 +40,11 @@ function ensureDataDir() {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
   } catch {
-    // 忽略建立目錄錯誤，由記憶體接管
+    // 忽略
   }
 }
 
 function readJson<T>(file: string, defaultData: T, key: keyof typeof memoryStore): T {
-  // 1. 若記憶體中已存在最新資料，優先回傳
   if (memoryStore[key]) {
     return memoryStore[key] as T;
   }
@@ -58,11 +57,10 @@ function readJson<T>(file: string, defaultData: T, key: keyof typeof memoryStore
       (memoryStore as Record<string, unknown>)[key] = parsed;
       return parsed;
     } catch {
-      // 解析失敗
+      // 忽略
     }
   }
 
-  // 嘗試從原始碼根目錄讀取預設種子（若有的話）
   const fallbackFile = path.join(process.cwd(), '.data', path.basename(file));
   if (fs.existsSync(fallbackFile)) {
     try {
@@ -71,7 +69,7 @@ function readJson<T>(file: string, defaultData: T, key: keyof typeof memoryStore
       (memoryStore as Record<string, unknown>)[key] = parsed;
       return parsed;
     } catch {
-      // 解析失敗
+      // 忽略
     }
   }
 
@@ -80,28 +78,36 @@ function readJson<T>(file: string, defaultData: T, key: keyof typeof memoryStore
 }
 
 function writeJson<T>(file: string, data: T, key: keyof typeof memoryStore) {
-  // 1. 同步寫入記憶體
   (memoryStore as Record<string, unknown>)[key] = data;
-
-  // 2. 嘗試持久化到磁碟（/tmp 或 .data）
   ensureDataDir();
   try {
     fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf-8');
   } catch {
-    // 若唯讀環境則依賴記憶體快取
+    // 忽略
   }
 }
 
-// 預設示範資料
-const DEFAULT_USER: User = {
-  id: 'teacher-luyang-001',
-  provider: 'luyang_sso',
-  username: 'teacher_lin',
-  name: '林老師',
-  role: 'teacher',
-  email: 'teacher@luyang.edu.tw',
-  createdAt: new Date().toISOString(),
-};
+// 預設種子使用者
+const DEFAULT_USERS: (User & { passwordHash?: string })[] = [
+  {
+    id: 'admin-001',
+    provider: 'local',
+    username: 'admin',
+    name: '系統管理員',
+    role: 'admin',
+    email: 'admin@luyang.edu.tw',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'teacher-luyang-001',
+    provider: 'luyang_sso',
+    username: 'teacher_lin',
+    name: '林老師',
+    role: 'teacher',
+    email: 'teacher@luyang.edu.tw',
+    createdAt: new Date().toISOString(),
+  },
+];
 
 const DEFAULT_BOARD: Board = {
   id: 'demo-stream-board',
@@ -113,8 +119,8 @@ const DEFAULT_BOARD: Board = {
   requireApproval: false,
   reactionType: 'like',
   profanityFilter: true,
-  createdBy: DEFAULT_USER.id,
-  creatorName: DEFAULT_USER.name,
+  createdBy: 'teacher-luyang-001',
+  creatorName: '林老師',
   createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
   updatedAt: new Date().toISOString(),
 };
@@ -123,7 +129,7 @@ const DEFAULT_POSTS: Post[] = [
   {
     id: 'post-1',
     boardId: 'demo-stream-board',
-    authorId: DEFAULT_USER.id,
+    authorId: 'teacher-luyang-001',
     authorName: '林老師（板主）',
     isAuthorTeacher: true,
     title: '📢 觀察提示與注意事項',
@@ -256,19 +262,19 @@ export const db = {
   },
 
   // Users
-  getUsers: (): User[] => {
-    return readJson<User[]>(USERS_FILE, [DEFAULT_USER], 'users');
+  getUsers: (): (User & { passwordHash?: string })[] => {
+    return readJson<(User & { passwordHash?: string })[]>(USERS_FILE, DEFAULT_USERS, 'users');
   },
   getUserById: (id: string): User | undefined => {
     const users = db.getUsers();
     return users.find((u) => u.id === id);
   },
   getUserByUsername: (username: string): (User & { passwordHash?: string }) | undefined => {
-    const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, [DEFAULT_USER], 'users');
+    const users = db.getUsers();
     return users.find((u) => u.username === username);
   },
   saveUser: (user: User & { passwordHash?: string }): User => {
-    const users = readJson<(User & { passwordHash?: string })[]>(USERS_FILE, [DEFAULT_USER], 'users');
+    const users = db.getUsers();
     const idx = users.findIndex((u) => u.id === user.id);
     if (idx >= 0) {
       users[idx] = { ...users[idx], ...user };
@@ -277,6 +283,21 @@ export const db = {
     }
     writeJson(USERS_FILE, users, 'users');
     return user;
+  },
+  updateUserRole: (userId: string, role: UserRole): User | undefined => {
+    const users = db.getUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) return undefined;
+    users[idx].role = role;
+    writeJson(USERS_FILE, users, 'users');
+    return users[idx];
+  },
+  deleteUser: (userId: string): boolean => {
+    const users = db.getUsers();
+    const filtered = users.filter((u) => u.id !== userId);
+    if (filtered.length === users.length) return false;
+    writeJson(USERS_FILE, filtered, 'users');
+    return true;
   },
 
   // Comments

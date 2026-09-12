@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { LuyangSSOPayload, User } from '@/types';
+import { LuyangSSOPayload, User, UserRole } from '@/types';
 import { db } from '@/lib/db';
 
 export const LUYANG_SSO_SECRET =
@@ -30,12 +30,24 @@ export function verifyLuyangToken(token: string): { success: boolean; payload?: 
 export function syncLuyangUser(payload: LuyangSSOPayload): User {
   const existingUser = db.getUserById(payload.uid);
 
+  // 判斷角色：若原先已在資料庫核定過角色，優先保留；
+  // 否則若姓名為「吳睿紘」或 role 為 admin，自動設為 admin；
+  // 其餘依照 SSO 的 role (teacher / student)
+  let initialRole: UserRole = 'student';
+  if (payload.name === '吳睿紘' || payload.role === 'admin' || payload.username === 'admin') {
+    initialRole = 'admin';
+  } else if (payload.role === 'teacher') {
+    initialRole = 'teacher';
+  }
+
+  const role: UserRole = existingUser?.role || initialRole;
+
   const userData: User = {
     id: payload.uid,
     provider: 'luyang_sso',
     username: payload.username,
     name: payload.name,
-    role: payload.role || 'student',
+    role,
     createdAt: existingUser?.createdAt || new Date().toISOString(),
   };
 

@@ -12,12 +12,13 @@ import {
   Clock,
   Send,
   Sparkles,
+  Crown,
 } from 'lucide-react';
 
 interface PostCardProps {
   post: Post;
   currentUser: User | null;
-  isOwner: boolean;
+  isOwner: boolean; // 看板擁有者 (教師或管理員)
   onPostUpdated: (updatedPost: Post) => void;
   onPostDeleted: (postId: string) => void;
 }
@@ -37,8 +38,17 @@ export function PostCard({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
 
-  const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
-  const canDelete = isTeacher || (currentUser && currentUser.id === post.authorId);
+  // 身分與權限判斷
+  const isAdmin = currentUser?.role === 'admin';
+  const isTeacher = isOwner || currentUser?.role === 'teacher' || isAdmin;
+  const isAuthor = currentUser && post.authorId && currentUser.id === post.authorId;
+
+  // 刪除權限控制：
+  // 1. 訪客 (未登入)：不可刪除 (canDelete = false)
+  // 2. 學生：僅能刪除自己發表的 (isAuthor)
+  // 3. 看板教師：可刪除看板內所有卡片 (isOwner)
+  // 4. 管理員：全域可刪除 (isAdmin)
+  const canDelete = isAdmin || isOwner || isAuthor;
 
   // 點讚
   const handleLike = async () => {
@@ -82,6 +92,12 @@ export function PostCard({
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim()) return;
+
+    if (!currentUser && (!commentAuthor || !commentAuthor.trim())) {
+      alert('訪客留言請先填寫您的暱稱！');
+      return;
+    }
+
     setSubmittingComment(true);
 
     try {
@@ -94,17 +110,22 @@ export function PostCard({
         }),
       });
       const data = await res.json();
-      if (res.ok && data.comment) {
-        setComments((prev) => [...prev, data.comment]);
-        setNewComment('');
-        onPostUpdated({ ...post, commentCount: (post.commentCount || 0) + 1 });
+      if (!res.ok) {
+        throw new Error(data.error || '留言失敗');
       }
+
+      setComments((prev) => [...prev, data.comment]);
+      setNewComment('');
+      onPostUpdated({ ...post, commentCount: (post.commentCount || 0) + 1 });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '留言失敗';
+      alert(msg);
     } finally {
       setSubmittingComment(false);
     }
   };
 
-  // 教師審核通過
+  // 審核通過
   const handleApprove = async () => {
     const res = await fetch('/api/posts', {
       method: 'PATCH',
@@ -123,6 +144,9 @@ export function PostCard({
     const res = await fetch(`/api/posts?postId=${post.id}`, { method: 'DELETE' });
     if (res.ok) {
       onPostDeleted(post.id);
+    } else {
+      const data = await res.json();
+      alert(data.error || '刪除失敗');
     }
   };
 
@@ -162,6 +186,11 @@ export function PostCard({
                     教師
                   </span>
                 )}
+                {!post.authorId && (
+                  <span className="text-[10px] bg-gray-200/80 text-gray-600 px-1.5 py-0.2 rounded-md font-medium">
+                    訪客
+                  </span>
+                )}
               </div>
               <span className="text-[11px] text-gray-500 block">
                 {formatDate(post.createdAt)}
@@ -169,12 +198,12 @@ export function PostCard({
             </div>
           </div>
 
-          {/* 右上角操作選單 */}
+          {/* 右上角操作選單 (僅符合身分權限者可見) */}
           <div className="flex items-center gap-1">
             {canDelete && (
               <button
                 onClick={handleDelete}
-                title="刪除貼文"
+                title={isAdmin ? '管理員刪除' : isOwner ? '教師刪除' : '刪除我的貼文'}
                 className="opacity-60 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-600 hover:bg-black/5 rounded-lg transition"
               >
                 <Trash2 className="w-4 h-4" />
@@ -248,7 +277,7 @@ export function PostCard({
         )}
       </div>
 
-      {/* 審核操作區（若為待審核且是教師） */}
+      {/* 審核操作區（僅看板教師或管理員可操作） */}
       {post.status === 'pending' && isTeacher && (
         <div className="mt-4 p-2.5 bg-amber-100/80 rounded-2xl border border-amber-300 flex items-center justify-between">
           <span className="text-xs font-bold text-amber-900">
@@ -317,10 +346,11 @@ export function PostCard({
             {!currentUser && (
               <input
                 type="text"
-                placeholder="您的暱稱（選填）"
+                required
+                placeholder="請輸入您的暱稱（訪客必填）*"
                 value={commentAuthor}
                 onChange={(e) => setCommentAuthor(e.target.value)}
-                className="w-full text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden"
+                className="w-full text-xs bg-white/90 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-hidden focus:border-amber-400"
               />
             )}
             <div className="flex gap-1.5">
