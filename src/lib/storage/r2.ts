@@ -1,10 +1,10 @@
-﻿import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
-const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID;
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME;
-const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN;
+const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'ca5d155a8d1dcb2a9ee6770606e12a15';
+const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '8558bea706a171f2ba5a93448426b5fd';
+const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '0686c35f7ca2dee6683abf79af880d3b11e7e3c16c263c0398e0ef32ef076a05';
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'luwall-media';
+const R2_PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN || 'https://pub-2fc70d0fa2a84eb29a162b30ab78970f.r2.dev';
 
 export function isR2Configured(): boolean {
   return Boolean(
