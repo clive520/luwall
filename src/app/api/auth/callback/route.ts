@@ -10,8 +10,11 @@ export async function GET(request: NextRequest) {
   const origin = requestUrl.origin;
 
   if (code) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://luzwahlunoboxlkffqry.supabase.co';
+    const supabaseAnonKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx1endhaGx1bm9ib3hsa2ZmcXJ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODczNzc3OTcsImV4cCI6MjEwMjk1Mzc5N30.EJBRxSGxMJ0FDDbcewPGtuTsEixguo6EP1RjVzssCVo';
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
