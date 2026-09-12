@@ -6,11 +6,12 @@ import { User } from '@/types';
 // 支援 Google 一鍵登入（提供真實 OAuth 橋接與一鍵體驗模擬）
 export async function POST(request: NextRequest) {
   try {
+    await db.ensureHydrated();
     const body = await request.json();
     const { email, name, avatarUrl } = body;
 
     const userEmail = email || 'user@gmail.com';
-    const userName = name || 'Google 訪客老師';
+    const userName = name || 'Google 使用者';
 
     const userId = `google-${Buffer.from(userEmail).toString('hex').substring(0, 16)}`;
     let user = db.getUserById(userId);
@@ -27,6 +28,19 @@ export async function POST(request: NextRequest) {
         createdAt: new Date().toISOString(),
       };
       db.saveUser(user);
+    } else {
+      let updated = false;
+      if (userName && user.name !== userName) {
+        user.name = userName;
+        updated = true;
+      }
+      if (avatarUrl && user.avatarUrl !== avatarUrl) {
+        user.avatarUrl = avatarUrl;
+        updated = true;
+      }
+      if (updated) {
+        db.saveUser(user);
+      }
     }
 
     await createSessionCookie(user);
