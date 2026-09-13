@@ -29,6 +29,7 @@ interface CanvasViewProps {
   onPostUpdated: (post: Post) => void;
   onPostDeleted: (postId: string) => void;
   onSectionsUpdated: () => void;
+  isFullscreen?: boolean;
 }
 
 export function CanvasView({
@@ -37,6 +38,7 @@ export function CanvasView({
   posts,
   currentUser,
   isOwner,
+  isFullscreen = false,
   onPostClick,
   onOpenCreatePost,
   onPostUpdated,
@@ -226,8 +228,8 @@ export function CanvasView({
         onMouseDown={handleCanvasMouseDown}
         onDoubleClick={handleCanvasDoubleClick}
         style={{
-          height: 'calc(100vh - 160px)',
-          minHeight: '620px',
+          height: isFullscreen ? '100vh' : 'calc(100vh - 160px)',
+          minHeight: isFullscreen ? '100vh' : '620px',
           cursor: isPanning ? 'grabbing' : 'default',
           backgroundImage:
             'radial-gradient(circle, #cbd5e1 1.5px, transparent 1.5px)',

@@ -28,6 +28,8 @@ import {
   Settings,
   Globe,
   Lock,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 
 export default function BoardPage({
@@ -57,6 +59,36 @@ export default function BoardPage({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // 監聽原生全螢幕事件（支援鍵盤 Esc 退出時自動同步狀態）
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen?.();
+        setIsFullscreen(true);
+      } else {
+        await document.exitFullscreen?.();
+        setIsFullscreen(false);
+      }
+    } catch {
+      // 若瀏覽器限制全螢幕 API 呼叫，切換純 CSS 滿版全螢幕模式
+      setIsFullscreen((prev) => !prev);
+    }
+  };
 
   // 讀取個人縮放偏好設定
   useEffect(() => {
@@ -294,11 +326,16 @@ export default function BoardPage({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
-      <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />
+    <div
+      className={`min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col ${
+        isFullscreen ? 'h-screen overflow-hidden' : ''
+      }`}
+    >
+      {!isFullscreen && <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />}
 
-      {/* 看板頂部橫幅 */}
-      <div className={`w-full bg-gradient-to-r ${board.coverColor || 'from-emerald-500 to-teal-700'} text-white shadow-md transition-all`}>
+      {/* 看板頂部橫幅（全螢幕模式下隱藏） */}
+      {!isFullscreen && (
+        <div className={`w-full bg-gradient-to-r ${board.coverColor || 'from-emerald-500 to-teal-700'} text-white shadow-md transition-all`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             {/* 標題與說明 */}
@@ -437,6 +474,16 @@ export default function BoardPage({
                 <span>投影 QR Code 📱</span>
               </button>
 
+              {/* 全螢幕展示切換 */}
+              <button
+                onClick={handleToggleFullscreen}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
+                title="進入全螢幕展示模式（隱藏頂部資訊，僅留便籤）"
+              >
+                <Maximize className="w-4 h-4" />
+                <span className="hidden sm:inline">全螢幕</span>
+              </button>
+
               {/* 看板開立者 / 管理員專屬：看板設定按鈕 */}
               {isOwner && (
                 <button
@@ -461,10 +508,28 @@ export default function BoardPage({
           </div>
         </div>
       </div>
+      )}
 
-      {/* 內容主體（支援比例縮放與動態版型切換） */}
+      {/* 全螢幕模式浮動退出按鈕 */}
+      {isFullscreen && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 animate-fade-in">
+          <button
+            onClick={handleToggleFullscreen}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-black/75 hover:bg-black/90 active:scale-95 text-white text-xs font-black shadow-2xl backdrop-blur-md border border-white/20 transition-all opacity-80 hover:opacity-100 group"
+            title="退出全螢幕 (Esc)"
+          >
+            <Minimize className="w-4 h-4 text-amber-400 group-hover:scale-110 transition-transform" />
+            <span>退出全螢幕</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-white/20 text-[10px] font-mono text-gray-200">Esc</kbd>
+          </button>
+        </div>
+      )}
+
+      {/* 內容主體（支援比例縮放、動態版型切換與全螢幕） */}
       <main
-        className="flex-1 w-full pb-16 transition-all duration-150 ease-out"
+        className={`w-full transition-all duration-150 ease-out ${
+          isFullscreen ? 'h-screen overflow-auto' : 'flex-1 pb-16'
+        }`}
         style={
           {
             zoom: `${zoomLevel}%`,
@@ -478,6 +543,7 @@ export default function BoardPage({
             posts={posts}
             currentUser={currentUser}
             isOwner={isOwner}
+            isFullscreen={isFullscreen}
             onPostClick={(post) => setSelectedPost(post)}
             onOpenCreatePost={handleOpenCreatePost}
             onPostUpdated={handlePostUpdated}
