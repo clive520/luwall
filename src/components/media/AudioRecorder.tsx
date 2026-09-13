@@ -340,10 +340,6 @@ export const AudioRecorder = forwardRef<AudioRecorderHandle, AudioRecorderProps>
                   </span>
                 </button>
               </div>
-
-              <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 font-medium text-center mt-1">
-                💡 貼心提示：您可以點擊「使用這段錄音」，或直接點選下方發布按鈕，系統皆會自動上傳這段語音！
-              </p>
             </div>
           )}
         </div>
