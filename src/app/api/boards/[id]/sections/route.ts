@@ -76,8 +76,15 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { sectionId, title } = body;
+    const { sectionId, title, orderedIds } = body;
 
+    // 1. 批次重新排列主題順序
+    if (Array.isArray(orderedIds)) {
+      const reordered = await db.reorderSections(id, orderedIds);
+      return NextResponse.json({ success: true, sections: reordered });
+    }
+
+    // 2. 修改單一主題標題
     if (!sectionId || !title || !title.trim()) {
       return NextResponse.json({ error: '缺少必要參數' }, { status: 400 });
     }

@@ -5,17 +5,16 @@ import { Board, Post, User, Section, MediaAttachment } from '@/types';
 import { PostCard } from './PostCard';
 import {
   Plus,
-  MoreVertical,
   Edit2,
   Trash2,
   Check,
   X,
-  PlusCircle,
   FolderPlus,
   Clock,
   Filter,
   UploadCloud,
   Loader2,
+  GripVertical,
 } from 'lucide-react';
 
 interface ShelfViewProps {
@@ -29,6 +28,8 @@ interface ShelfViewProps {
   onPostUpdated: (post: Post) => void;
   onPostDeleted: (postId: string) => void;
   onSectionsUpdated: () => void;
+  onPostsReordered?: (posts: Post[]) => void;
+  onSectionsReordered?: (sections: Section[]) => void;
 }
 
 export function ShelfView({
@@ -42,6 +43,8 @@ export function ShelfView({
   onPostUpdated,
   onPostDeleted,
   onSectionsUpdated,
+  onPostsReordered,
+  onSectionsReordered,
 }: ShelfViewProps) {
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
   const [isAddingSection, setIsAddingSection] = useState(false);
@@ -49,11 +52,51 @@ export function ShelfView({
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [submittingSection, setSubmittingSection] = useState(false);
+
+  // 檔案上傳狀態
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
   const [uploadingSectionId, setUploadingSectionId] = useState<string | null>(null);
 
-  // 拖曳照片至主題欄位自動上傳並開啟發文
-  const handleDropOnSection = async (sectionId: string, e: React.DragEvent) => {
+  // 主題分類（左右拖曳）狀態
+  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
+  const [sectionDropTarget, setSectionDropTarget] = useState<{
+    sectionId: string;
+    position: 'before' | 'after';
+  } | null>(null);
+
+  // 便籤卡片（上下拖曳）狀態
+  const [draggingPostId, setDraggingPostId] = useState<string | null>(null);
+  const [postDropTarget, setPostDropTarget] = useState<{
+    sectionId: string;
+    postId?: string;
+    position: 'before' | 'after' | 'empty';
+  } | null>(null);
+
+  const isOwnerOrAdmin = isOwner || currentUser?.role === 'admin';
+  const pendingCount = posts.filter((p) => p.status === 'pending').length;
+
+  // 依 orderIndex 升冪排列主題分類
+  const sortedSections = [...sections].sort(
+    (a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0)
+  );
+
+  // 取得某主題下的排序便籤
+  const getSectionPosts = (sectionId: string, orderIndex: number) => {
+    return posts
+      .filter((p) => p.sectionId === sectionId || (!p.sectionId && orderIndex === 0))
+      .filter((p) => (filterPendingOnly ? p.status === 'pending' : true))
+      .sort((a, b) => {
+        if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
+          return a.orderIndex - b.orderIndex;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  };
+
+  // ==========================================
+  // 1. 拖曳照片檔案上傳發文
+  // ==========================================
+  const handleDropFilesOnSection = async (sectionId: string, e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverSectionId(null);
@@ -102,10 +145,188 @@ export function ShelfView({
     }
   };
 
-  const isOwnerOrAdmin = isOwner || currentUser?.role === 'admin';
-  const pendingCount = posts.filter((p) => p.status === 'pending').length;
+  // ==========================================
+  // 2. 主題分類（左右拖曳）處理函式
+  // ==========================================
+  const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
+    if (!isOwnerOrAdmin) return;
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'section', sectionId }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingSectionId(sectionId);
+  };
 
-  // 新增主題欄位
+  const handleSectionDragOver = (e: React.DragEvent, targetSectionId: string) => {
+    if (!draggingSectionId || draggingSectionId === targetSectionId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isAfter = e.clientX > rect.left + rect.width / 2;
+    setSectionDropTarget({
+      sectionId: targetSectionId,
+      position: isAfter ? 'after' : 'before',
+    });
+  };
+
+  const handleSectionDrop = (e: React.DragEvent, targetSectionId: string) => {
+    if (!draggingSectionId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (draggingSectionId === targetSectionId) {
+      handleDragEnd();
+      return;
+    }
+
+    const currentIdx = sortedSections.findIndex((s) => s.id === draggingSectionId);
+    const targetIdx = sortedSections.findIndex((s) => s.id === targetSectionId);
+
+    if (currentIdx !== -1 && targetIdx !== -1) {
+      const newSections = [...sortedSections];
+      const [moved] = newSections.splice(currentIdx, 1);
+      let insertIdx = newSections.findIndex((s) => s.id === targetSectionId);
+      if (sectionDropTarget?.position === 'after') {
+        insertIdx += 1;
+      }
+      newSections.splice(insertIdx, 0, moved);
+      const reordered = newSections.map((s, idx) => ({ ...s, orderIndex: idx }));
+
+      if (onSectionsReordered) {
+        onSectionsReordered(reordered);
+      }
+
+      fetch(`/api/boards/${board.id}/sections`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds: reordered.map((s) => s.id) }),
+      }).catch(console.error);
+    }
+
+    handleDragEnd();
+  };
+
+  // ==========================================
+  // 3. 便籤卡片（上下拖曳與跨欄移動）處理函式
+  // ==========================================
+  const handlePostDragStart = (e: React.DragEvent, postId: string, sectionId: string) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'post', postId, sectionId }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingPostId(postId);
+  };
+
+  const handlePostDragOver = (e: React.DragEvent, targetPostId: string, sectionId: string) => {
+    if (!draggingPostId || draggingPostId === targetPostId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isAfter = e.clientY > rect.top + rect.height / 2;
+    setPostDropTarget({
+      sectionId,
+      postId: targetPostId,
+      position: isAfter ? 'after' : 'before',
+    });
+  };
+
+  const handleSectionContainerDragOver = (e: React.DragEvent, sectionId: string) => {
+    if (!draggingPostId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!postDropTarget || postDropTarget.sectionId !== sectionId || !postDropTarget.postId) {
+      setPostDropTarget({
+        sectionId,
+        position: 'empty',
+      });
+    }
+  };
+
+  const handlePostDrop = (e: React.DragEvent, targetSectionId: string, targetPostId?: string) => {
+    if (!draggingPostId) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const postToMove = posts.find((p) => p.id === draggingPostId);
+    if (!postToMove) {
+      handleDragEnd();
+      return;
+    }
+
+    // 取得目標欄位的所有貼文（除了被拖曳者本身）
+    const currentTargetPosts = posts
+      .filter(
+        (p) =>
+          p.id !== draggingPostId &&
+          (p.sectionId === targetSectionId || (!p.sectionId && sortedSections[0]?.id === targetSectionId))
+      )
+      .sort((a, b) => {
+        if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
+          return a.orderIndex - b.orderIndex;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+    let insertIndex = currentTargetPosts.length; // 預設放末端
+    if (targetPostId) {
+      const idx = currentTargetPosts.findIndex((p) => p.id === targetPostId);
+      if (idx !== -1) {
+        insertIndex = postDropTarget?.position === 'after' ? idx + 1 : idx;
+      }
+    }
+
+    const updatedTargetPosts = [...currentTargetPosts];
+    const updatedPostToMove = {
+      ...postToMove,
+      sectionId: targetSectionId,
+    };
+    updatedTargetPosts.splice(insertIndex, 0, updatedPostToMove);
+
+    const reorderedInTarget = updatedTargetPosts.map((p, idx) => ({
+      ...p,
+      orderIndex: idx,
+    }));
+
+    // 保留非目標欄位的其他貼文
+    const otherPosts = posts.filter(
+      (p) =>
+        p.id !== draggingPostId &&
+        p.sectionId !== targetSectionId &&
+        (p.sectionId || sortedSections[0]?.id !== targetSectionId)
+    );
+
+    const finalAllPosts = [...otherPosts, ...reorderedInTarget];
+
+    if (onPostsReordered) {
+      onPostsReordered(finalAllPosts);
+    }
+
+    fetch(`/api/boards/${board.id}/posts/reorder`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reorderedPosts: reorderedInTarget.map((p) => ({
+          id: p.id,
+          orderIndex: p.orderIndex,
+          sectionId: p.sectionId,
+        })),
+      }),
+    }).catch(console.error);
+
+    handleDragEnd();
+  };
+
+  const handleDragEnd = () => {
+    setDraggingSectionId(null);
+    setSectionDropTarget(null);
+    setDraggingPostId(null);
+    setPostDropTarget(null);
+    setDragOverSectionId(null);
+  };
+
+  // ==========================================
+  // 4. 主題 CRUD 操作
+  // ==========================================
   const handleAddSection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSectionTitle.trim()) return;
@@ -130,7 +351,6 @@ export function ShelfView({
     }
   };
 
-  // 編輯主題名稱
   const handleSaveEditSection = async (sectionId: string) => {
     if (!editingTitle.trim()) return;
     try {
@@ -148,7 +368,6 @@ export function ShelfView({
     }
   };
 
-  // 刪除主題欄位
   const handleDeleteSection = async (sectionId: string, title: string) => {
     if (!confirm(`確定要刪除主題分類「${title}」嗎？`)) return;
     try {
@@ -195,36 +414,66 @@ export function ShelfView({
 
       {/* 橫向可滑動主題欄位容器 */}
       <div className="flex flex-row items-start gap-6 overflow-x-auto pb-16 pt-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
-        {sections.map((section) => {
-          // 找出屬於該主題的貼文
-          const sectionPosts = posts
-            .filter((p) => (p.sectionId === section.id || (!p.sectionId && section.orderIndex === 0)))
-            .filter((p) => (filterPendingOnly ? p.status === 'pending' : true));
+        {sortedSections.map((section) => {
+          const sectionPosts = getSectionPosts(section.id, section.orderIndex);
 
           const isColumnDragging = dragOverSectionId === section.id;
           const isColumnUploading = uploadingSectionId === section.id;
+
+          const isThisSectionDragging = draggingSectionId === section.id;
+          const isTargetBefore =
+            sectionDropTarget?.sectionId === section.id && sectionDropTarget?.position === 'before';
+          const isTargetAfter =
+            sectionDropTarget?.sectionId === section.id && sectionDropTarget?.position === 'after';
 
           return (
             <div
               key={section.id}
               onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setDragOverSectionId(section.id);
+                if (e.dataTransfer.types.includes('Files')) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverSectionId(section.id);
+                } else if (draggingSectionId) {
+                  handleSectionDragOver(e, section.id);
+                }
               }}
               onDragLeave={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                 setDragOverSectionId(null);
+                if (sectionDropTarget?.sectionId === section.id) {
+                  setSectionDropTarget(null);
+                }
               }}
-              onDrop={(e) => handleDropOnSection(section.id, e)}
-              className={`w-76 sm:w-84 shrink-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md rounded-3xl border shadow-xs flex flex-col transition-all relative overflow-hidden ${
+              onDrop={(e) => {
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleDropFilesOnSection(section.id, e);
+                } else if (draggingSectionId) {
+                  handleSectionDrop(e, section.id);
+                } else if (draggingPostId) {
+                  handlePostDrop(e, section.id);
+                }
+              }}
+              className={`w-76 sm:w-84 shrink-0 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md rounded-3xl border shadow-xs flex flex-col transition-all relative overflow-visible ${
                 isColumnDragging
                   ? 'border-amber-500 ring-4 ring-amber-300/60 scale-[1.01]'
-                  : 'border-gray-200/80 dark:border-slate-800'
+                  : isThisSectionDragging
+                  ? 'opacity-40 border-dashed border-amber-400 scale-[0.98]'
+                  : 'border-gray-200/90 dark:border-slate-800 hover:border-amber-200 dark:hover:border-slate-700'
               }`}
             >
+              {/* 主題左右拖曳放置引導線（左側） */}
+              {isTargetBefore && (
+                <div className="absolute -left-3.5 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-500 to-yellow-500 rounded-full shadow-lg shadow-amber-400/80 z-40 animate-pulse pointer-events-none" />
+              )}
+
+              {/* 主題左右拖曳放置引導線（右側） */}
+              {isTargetAfter && (
+                <div className="absolute -right-3.5 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-500 to-yellow-500 rounded-full shadow-lg shadow-amber-400/80 z-40 animate-pulse pointer-events-none" />
+              )}
+
               {/* 拖曳圖片覆蓋提示 */}
               {(isColumnDragging || isColumnUploading) && (
                 <div className="absolute inset-0 z-30 bg-amber-500/90 text-white flex flex-col items-center justify-center p-4 text-center backdrop-blur-xs border-4 border-dashed border-white rounded-3xl animate-pulse pointer-events-none">
@@ -244,7 +493,7 @@ export function ShelfView({
                 </div>
               )}
 
-              {/* 欄位頭部（主題標題與新增便籤按鈕，吸頂維持可見） */}
+              {/* 欄位頭部（主題標題、拖曳把手與新增便籤按鈕，吸頂維持可見） */}
               <div className="sticky top-2 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-t-3xl border-b border-gray-100 dark:border-slate-800 shadow-2xs">
                 <div className="p-4 flex items-center justify-between gap-2">
                   {editingSectionId === section.id ? (
@@ -270,7 +519,20 @@ export function ShelfView({
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                      {/* 左右拖曳主題欄位把手（僅看板擁有者/管理員可見） */}
+                      {isOwnerOrAdmin && (
+                        <div
+                          draggable={true}
+                          onDragStart={(e) => handleSectionDragStart(e, section.id)}
+                          onDragEnd={handleDragEnd}
+                          className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-gray-400 hover:text-amber-600 hover:bg-amber-100/50 dark:hover:bg-slate-800 rounded-lg transition shrink-0"
+                          title="按住左右拖曳調整主題欄位順序 ⇄"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </div>
+                      )}
+
                       <h3 className="font-extrabold text-sm text-gray-900 dark:text-gray-100 truncate">
                         {section.title}
                       </h3>
@@ -318,27 +580,109 @@ export function ShelfView({
                 </div>
               </div>
 
-              {/* 該主題下的便籤卡片垂直串流（隨便籤數量向下自然延伸） */}
-              <div className="p-3 space-y-4">
+              {/* 該主題下的便籤卡片垂直串流（隨便籤數量向下自然延伸，支援拖曳上下排列） */}
+              <div
+                onDragOver={(e) => handleSectionContainerDragOver(e, section.id)}
+                className="p-3 space-y-3.5 min-h-[140px] flex-1"
+              >
                 {sectionPosts.length === 0 ? (
-                  <div className="text-center py-10 text-gray-400 dark:text-gray-500 text-xs font-medium">
-                    此主題尚無便籤，<br />
-                    點擊上方按鈕或拖曳照片張貼第一張！
+                  <div
+                    onDrop={(e) => handlePostDrop(e, section.id)}
+                    className={`text-center py-10 rounded-2xl border-2 border-dashed transition-colors flex flex-col items-center justify-center ${
+                      postDropTarget?.sectionId === section.id && postDropTarget.position === 'empty'
+                        ? 'border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200'
+                        : 'border-gray-200 dark:border-slate-800 text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
+                    {postDropTarget?.sectionId === section.id && postDropTarget.position === 'empty' ? (
+                      <span className="text-xs font-bold animate-pulse">放開滑鼠以將便籤移至此處 📥</span>
+                    ) : (
+                      <span className="text-xs font-medium leading-relaxed">
+                        此主題尚無便籤，<br />
+                        點擊上方按鈕或拖曳照片張貼！
+                      </span>
+                    )}
                   </div>
                 ) : (
-                  sectionPosts.map((post) => (
-                    <PostCard
-                      key={post.id}
-                      post={post}
-                      sections={sections}
-                      currentUser={currentUser}
-                      isOwner={isOwner}
-                      onPostClick={onPostClick}
-                      onPostUpdated={onPostUpdated}
-                      onPostDeleted={onPostDeleted}
-                    />
-                  ))
+                  sectionPosts.map((post, idx) => {
+                    const canDragPost =
+                      isOwnerOrAdmin || Boolean(currentUser && post.authorId && currentUser.id === post.authorId);
+                    const isBeingDragged = draggingPostId === post.id;
+                    const isDropBefore =
+                      postDropTarget?.sectionId === section.id &&
+                      postDropTarget?.postId === post.id &&
+                      postDropTarget?.position === 'before';
+                    const isDropAfter =
+                      postDropTarget?.sectionId === section.id &&
+                      postDropTarget?.postId === post.id &&
+                      postDropTarget?.position === 'after';
+
+                    return (
+                      <div
+                        key={post.id}
+                        onDragOver={(e) => handlePostDragOver(e, post.id, section.id)}
+                        onDrop={(e) => handlePostDrop(e, section.id, post.id)}
+                        className="relative"
+                      >
+                        {/* 拖曳落點導引線（上方） */}
+                        {isDropBefore && (
+                          <div className="absolute -top-2 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full shadow-md shadow-amber-300 z-30 animate-pulse pointer-events-none" />
+                        )}
+
+                        <div
+                          className={`relative rounded-3xl overflow-hidden transition-all duration-150 group ${
+                            isBeingDragged ? 'opacity-30 scale-95 ring-2 ring-amber-400' : ''
+                          }`}
+                        >
+                          {/* 便籤頂部拖曳把手列 */}
+                          {canDragPost && (
+                            <div
+                              draggable={true}
+                              onDragStart={(e) => handlePostDragStart(e, post.id, section.id)}
+                              onDragEnd={handleDragEnd}
+                              className="flex items-center justify-between px-3 py-1 bg-amber-50/90 dark:bg-slate-800/90 border-b border-amber-200/50 dark:border-slate-700/60 cursor-grab active:cursor-grabbing text-gray-500 hover:text-amber-800 dark:text-gray-400 dark:hover:text-amber-300 text-[10px] font-bold select-none transition-colors"
+                              title="按住上下拖曳重新排列便籤 ⇅"
+                            >
+                              <span className="flex items-center gap-1">
+                                <GripVertical className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                <span>按住拖曳排序</span>
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-mono">#{idx + 1}</span>
+                            </div>
+                          )}
+
+                          <PostCard
+                            post={post}
+                            sections={sections}
+                            currentUser={currentUser}
+                            isOwner={isOwner}
+                            onPostClick={onPostClick}
+                            onPostUpdated={onPostUpdated}
+                            onPostDeleted={onPostDeleted}
+                          />
+                        </div>
+
+                        {/* 拖曳落點導引線（下方） */}
+                        {isDropAfter && (
+                          <div className="absolute -bottom-2 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-full shadow-md shadow-amber-300 z-30 animate-pulse pointer-events-none" />
+                        )}
+                      </div>
+                    );
+                  })
                 )}
+
+                {/* 當拖曳便籤至欄位最底端時的放置區塊 */}
+                {draggingPostId &&
+                  sectionPosts.length > 0 &&
+                  postDropTarget?.sectionId === section.id &&
+                  postDropTarget.position === 'empty' && (
+                    <div
+                      onDrop={(e) => handlePostDrop(e, section.id)}
+                      className="h-14 rounded-2xl border-2 border-dashed border-amber-500 bg-amber-50/60 dark:bg-amber-950/30 flex items-center justify-center text-amber-800 dark:text-amber-200 text-xs font-bold animate-pulse"
+                    >
+                      放開滑鼠放置於欄位最末端 📥
+                    </div>
+                  )}
               </div>
             </div>
           );

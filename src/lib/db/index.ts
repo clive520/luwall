@@ -331,6 +331,29 @@ export const db = {
     }
     return true;
   },
+  reorderSections: async (boardId: string, orderedSectionIds: string[]): Promise<Section[]> => {
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    const modifiedSections: Section[] = [];
+
+    orderedSectionIds.forEach((secId, idx) => {
+      const sec = allSections.find((s) => s.id === secId && s.boardId === boardId);
+      if (sec) {
+        sec.orderIndex = idx;
+        modifiedSections.push(sec);
+      }
+    });
+
+    writeJson(SECTIONS_FILE, allSections, 'sections');
+    lastHydratedAt = 0;
+
+    if (isSupabaseConfigured()) {
+      for (const sec of modifiedSections) {
+        await syncSectionToSupabase(sec);
+      }
+    }
+
+    return db.getSectionsByBoardId(boardId);
+  },
 
   // Posts
   getPostsByBoardId: (
@@ -351,7 +374,12 @@ export const db = {
         if (guestPostIds.includes(p.id)) return true;
         return false;
       })
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a, b) => {
+        if (a.orderIndex !== undefined && b.orderIndex !== undefined && a.orderIndex !== b.orderIndex) {
+          return a.orderIndex - b.orderIndex;
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
   },
   getPostsByBoardIdAsync: async (
     boardId: string,
@@ -410,6 +438,36 @@ export const db = {
     if (isSupabaseConfigured()) {
       await deletePostFromSupabase(id);
     }
+    return true;
+  },
+  reorderPosts: async (
+    boardId: string,
+    updates: { id: string; orderIndex: number; sectionId?: string }[]
+  ): Promise<boolean> => {
+    const allPosts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
+    const modifiedPosts: Post[] = [];
+
+    for (const update of updates) {
+      const post = allPosts.find((p) => p.id === update.id && p.boardId === boardId);
+      if (post) {
+        post.orderIndex = update.orderIndex;
+        if (update.sectionId !== undefined) {
+          post.sectionId = update.sectionId;
+        }
+        post.updatedAt = new Date().toISOString();
+        modifiedPosts.push(post);
+      }
+    }
+
+    writeJson(POSTS_FILE, allPosts, 'posts');
+    lastHydratedAt = 0;
+
+    if (isSupabaseConfigured()) {
+      for (const post of modifiedPosts) {
+        await syncPostToSupabase(post);
+      }
+    }
+
     return true;
   },
 

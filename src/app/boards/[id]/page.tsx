@@ -599,6 +599,8 @@ export default function BoardPage({
             onPostUpdated={handlePostUpdated}
             onPostDeleted={handlePostDeleted}
             onSectionsUpdated={fetchBoardData}
+            onPostsReordered={(newPosts) => setPosts(newPosts)}
+            onSectionsReordered={(newSections) => setSections(newSections)}
           />
         )}
       </main>
