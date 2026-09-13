@@ -288,11 +288,12 @@ export function CanvasView({
           </button>
 
           <button
+            type="button"
             onClick={() => onOpenCreatePost()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-lg transition active:scale-95"
+            className="p-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white shadow-lg transition active:scale-95 flex items-center justify-center"
+            title="新增便籤 📝"
           >
-            <Plus className="w-4 h-4" />
-            <span>貼便籤 📝</span>
+            <Plus className="w-4 h-4 stroke-[2.5]" />
           </button>
         </div>
 

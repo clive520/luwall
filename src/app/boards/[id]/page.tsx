@@ -467,42 +467,44 @@ export default function BoardPage({
 
               {/* QR Code 投影 */}
               <button
+                type="button"
                 onClick={() => setIsQRCodeOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
+                className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                title="投影 QR Code 📱"
               >
                 <QrCode className="w-4 h-4" />
-                <span>投影 QR Code 📱</span>
               </button>
 
               {/* 全螢幕展示切換 */}
               <button
+                type="button"
                 onClick={handleToggleFullscreen}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
-                title="進入全螢幕展示模式（隱藏頂部資訊，僅留便籤）"
+                className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                title="全螢幕展示 ⛶"
               >
                 <Maximize className="w-4 h-4" />
-                <span className="hidden sm:inline">全螢幕</span>
               </button>
 
               {/* 看板開立者 / 管理員專屬：看板設定按鈕 */}
               {isOwner && (
                 <button
+                  type="button"
                   onClick={() => setIsSettingsOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white text-xs font-bold backdrop-blur border border-white/20 shadow-xs transition"
-                  title="管理看板隱私與發表權限"
+                  className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                  title="看板設定 ⚙️"
                 >
                   <Settings className="w-4 h-4" />
-                  <span>看板設定 ⚙️</span>
                 </button>
               )}
 
               {/* 新增便籤 */}
               <button
+                type="button"
                 onClick={() => handleOpenCreatePost()}
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-2xl bg-white text-gray-900 hover:bg-amber-50 text-xs font-black shadow-md transition transform active:scale-95"
+                className="p-2.5 rounded-2xl bg-white text-gray-900 hover:bg-amber-50 shadow-md transition transform active:scale-95"
+                title="新增便籤 📝"
               >
-                <Plus className="w-4 h-4 text-amber-600" />
-                <span>貼便籤 📝</span>
+                <Plus className="w-4 h-4 text-amber-600 stroke-[2.5]" />
               </button>
             </div>
           </div>
