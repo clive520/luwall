@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Post, Section, MediaAttachment } from '@/types';
-import { AudioRecorder } from '@/components/media/AudioRecorder';
+import { AudioRecorder, AudioRecorderHandle } from '@/components/media/AudioRecorder';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
 import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
 import {
@@ -41,6 +41,7 @@ export function EditPostModal({
   onClose,
   onPostUpdated,
 }: EditPostModalProps) {
+  const audioRecorderRef = useRef<AudioRecorderHandle | null>(null);
   const [title, setTitle] = useState(post.title || '');
   const [content, setContent] = useState(post.content || '');
   const [selectedSectionId, setSelectedSectionId] = useState<string>(post.sectionId || '');
@@ -281,8 +282,30 @@ export function EditPostModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 嘗試從網址輸入框或內容中自動解析網址附件
+    // 若處於語音錄音模式，且有尚未手動點擊「使用這段錄音」的錄音紀錄，自動上傳為附件
     let finalAttachment = attachment;
+    if (mediaType === 'audio' && audioRecorderRef.current && audioRecorderRef.current.hasPendingAudio()) {
+      setSubmitting(true);
+      setError(null);
+      try {
+        const audioRes = await audioRecorderRef.current.uploadCurrentAudio();
+        if (audioRes) {
+          finalAttachment = {
+            type: 'audio',
+            url: audioRes.url,
+            metadata: { duration: audioRes.duration },
+          };
+          setAttachment(finalAttachment);
+        }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : '自動上傳錄音失敗';
+        setError(msg);
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // 嘗試從網址輸入框或內容中自動解析網址附件
     if (!finalAttachment) {
       const rawUrl = linkInput.trim() || findUrls(content)[0] || findUrls(title)[0];
       if (rawUrl) {
@@ -534,7 +557,13 @@ export function EditPostModal({
             {/* 展開之錄音組件 */}
             {mediaType === 'audio' && (
               <AudioRecorder
+                ref={audioRecorderRef}
                 onAudioReady={handleAudioReady}
+                onReset={() => {
+                  if (attachment?.type === 'audio') {
+                    setAttachment(undefined);
+                  }
+                }}
                 onCancel={() => {
                   setMediaType('none');
                   setAttachment(undefined);
