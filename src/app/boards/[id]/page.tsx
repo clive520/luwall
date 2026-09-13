@@ -304,8 +304,17 @@ export default function BoardPage({
                   <span>所有看板</span>
                 </Link>
                 <span className="px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-bold backdrop-blur flex items-center gap-1">
-                  <Layers className="w-3 h-3" />
-                  多主題分欄 Shelf
+                  {board.layoutType === 'wall' ? (
+                    <>
+                      <LayoutGrid className="w-3 h-3" />
+                      磚牆
+                    </>
+                  ) : (
+                    <>
+                      <Layers className="w-3 h-3" />
+                      分欄
+                    </>
+                  )}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-400/30 text-emerald-100 text-[11px] font-medium backdrop-blur">
                   <Radio className="w-3 h-3 animate-pulse" />
@@ -363,7 +372,7 @@ export default function BoardPage({
 
             {/* 操作按鈕群（投影 QR Code、看板設定、新增卡片） */}
             <div className="flex flex-wrap items-center gap-2 sm:self-end">
-              {/* 版型切換快捷鍵（分欄 vs 磚牆瀑布流） */}
+              {/* 版型切換快捷鍵（分欄 vs 磚牆） */}
               <div className="inline-flex items-center p-0.5 rounded-2xl bg-black/20 backdrop-blur border border-white/20 shadow-xs">
                 <button
                   type="button"
@@ -373,10 +382,10 @@ export default function BoardPage({
                       ? 'bg-white text-gray-900 shadow-xs'
                       : 'text-white/80 hover:text-white'
                   }`}
-                  title="分欄貨架模式：依主題多欄直立展示"
+                  title="分欄模式"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">分欄貨架</span>
+                  <span className="hidden sm:inline">分欄</span>
                 </button>
                 <button
                   type="button"
@@ -386,10 +395,10 @@ export default function BoardPage({
                       ? 'bg-white text-gray-900 shadow-xs'
                       : 'text-white/80 hover:text-white'
                   }`}
-                  title="磚牆瀑布流模式：卡片緊密自適應貼合"
+                  title="磚牆模式"
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">磚牆瀑布流</span>
+                  <span className="hidden sm:inline">磚牆</span>
                 </button>
               </div>
 

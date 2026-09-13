@@ -204,7 +204,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
                     <LayoutGrid className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-black text-gray-900">磚牆瀑布流 (Wall)</div>
+                    <div className="text-xs font-black text-gray-900">磚牆</div>
                     <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
                       便籤自適應緊密排列，適合作品展、心得牆
                     </div>
@@ -224,7 +224,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
                     <Layers className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="text-xs font-black text-gray-900">分欄貨架 (Shelf)</div>
+                    <div className="text-xs font-black text-gray-900">分欄</div>
                     <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
                       依主題直欄橫向滑動，適合分組討論與單元歸類
                     </div>
