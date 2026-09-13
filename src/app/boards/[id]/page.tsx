@@ -7,6 +7,7 @@ import { Board, Post, User, Section, MediaAttachment } from '@/types';
 import { Navbar } from '@/components/common/Navbar';
 import { ShelfView } from '@/components/board/ShelfView';
 import { WallView } from '@/components/board/WallView';
+import { CanvasView } from '@/components/board/CanvasView';
 import { StreamView } from '@/components/board/StreamView';
 import { CreatePostModal } from '@/components/board/CreatePostModal';
 import { QRCodeModal } from '@/components/board/QRCodeModal';
@@ -23,6 +24,7 @@ import {
   Radio,
   Layers,
   LayoutGrid,
+  Sparkles,
   Settings,
   Globe,
   Lock,
@@ -49,6 +51,7 @@ export default function BoardPage({
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const [initialAttachment, setInitialAttachment] = useState<MediaAttachment | undefined>(undefined);
   const [activeSectionId, setActiveSectionId] = useState<string | undefined>(undefined);
+  const [activePos, setActivePos] = useState<{ x: number; y: number } | undefined>(undefined);
   const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -191,7 +194,11 @@ export default function BoardPage({
     setSelectedPost((curr) => (curr?.id === postId ? null : curr));
   };
 
-  const handleOpenCreatePost = (sectionId?: string, attachment?: MediaAttachment) => {
+  const handleOpenCreatePost = (
+    sectionId?: string,
+    attachment?: MediaAttachment,
+    initialPos?: { x: number; y: number }
+  ) => {
     if (board && !board.allowGuest && !currentUser) {
       alert('此看板目前設定「需登入帳號才可發表」，請先登入您的帳號！');
       router.push('/login');
@@ -199,6 +206,7 @@ export default function BoardPage({
     }
     setActiveSectionId(sectionId);
     setInitialAttachment(attachment);
+    setActivePos(initialPos);
     setIsCreatePostOpen(true);
   };
 
@@ -269,7 +277,7 @@ export default function BoardPage({
   }
 
   // 即時切換看板版型（開板老師切換時自動同步至資料庫）
-  const handleToggleLayout = async (newLayout: 'shelf' | 'wall') => {
+  const handleToggleLayout = async (newLayout: 'shelf' | 'wall' | 'canvas') => {
     if (!board || board.layoutType === newLayout) return;
     setBoard((prev) => (prev ? { ...prev, layoutType: newLayout } : null));
     if (isOwner) {
@@ -308,6 +316,11 @@ export default function BoardPage({
                     <>
                       <LayoutGrid className="w-3 h-3" />
                       磚牆
+                    </>
+                  ) : board.layoutType === 'canvas' ? (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      自由
                     </>
                   ) : (
                     <>
@@ -372,7 +385,7 @@ export default function BoardPage({
 
             {/* 操作按鈕群（投影 QR Code、看板設定、新增卡片） */}
             <div className="flex flex-wrap items-center gap-2 sm:self-end">
-              {/* 版型切換快捷鍵（分欄 vs 磚牆） */}
+              {/* 版型切換快捷鍵（分欄 vs 磚牆 vs 自由） */}
               <div className="inline-flex items-center p-0.5 rounded-2xl bg-black/20 backdrop-blur border border-white/20 shadow-xs">
                 <button
                   type="button"
@@ -399,6 +412,19 @@ export default function BoardPage({
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">磚牆</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayout('canvas')}
+                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                    board.layoutType === 'canvas'
+                      ? 'bg-white text-gray-900 shadow-xs'
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                  title="自由模式"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">自由</span>
                 </button>
               </div>
 
@@ -445,7 +471,20 @@ export default function BoardPage({
           } as React.CSSProperties
         }
       >
-        {board.layoutType === 'wall' ? (
+        {board.layoutType === 'canvas' ? (
+          <CanvasView
+            board={board}
+            sections={sections}
+            posts={posts}
+            currentUser={currentUser}
+            isOwner={isOwner}
+            onPostClick={(post) => setSelectedPost(post)}
+            onOpenCreatePost={handleOpenCreatePost}
+            onPostUpdated={handlePostUpdated}
+            onPostDeleted={handlePostDeleted}
+            onSectionsUpdated={fetchBoardData}
+          />
+        ) : board.layoutType === 'wall' ? (
           <WallView
             board={board}
             sections={sections}
@@ -507,11 +546,13 @@ export default function BoardPage({
         defaultSectionId={activeSectionId}
         initialAttachment={initialAttachment}
         initialMediaType={initialAttachment?.type || 'none'}
+        initialPos={activePos}
         currentUser={currentUser}
         isOpen={isCreatePostOpen}
         onClose={() => {
           setIsCreatePostOpen(false);
           setInitialAttachment(undefined);
+          setActivePos(undefined);
         }}
         onPostCreated={handlePostCreated}
       />

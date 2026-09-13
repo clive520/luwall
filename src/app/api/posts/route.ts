@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
       authorName,
       color = '#fef08a',
       attachment,
+      posX,
+      posY,
     } = body;
 
     if (!boardId) {
@@ -117,6 +119,8 @@ export async function POST(request: NextRequest) {
       attachment: finalAttachment,
       status,
       orderIndex: 0,
+      posX: typeof posX === 'number' ? posX : undefined,
+      posY: typeof posY === 'number' ? posY : undefined,
       likeCount: 0,
       upvotes: 0,
       downvotes: 0,
@@ -141,7 +145,7 @@ export async function PATCH(request: NextRequest) {
     await db.ensureHydrated();
     const user = await getCurrentUser();
     const body = await request.json();
-    const { postId, status, title, content, color, attachment, sectionId } = body;
+    const { postId, status, title, content, color, attachment, sectionId, posX, posY } = body;
 
     if (!postId) {
       return NextResponse.json({ error: '缺少貼文 ID' }, { status: 400 });
@@ -164,15 +168,17 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // 2. 若是編輯貼文內容 (title, content, color, attachment, sectionId)
+    // 2. 若是編輯貼文內容或畫布位置 (title, content, color, attachment, sectionId, posX, posY)
     if (
       title !== undefined ||
       content !== undefined ||
       color !== undefined ||
       attachment !== undefined ||
-      sectionId !== undefined
+      sectionId !== undefined ||
+      posX !== undefined ||
+      posY !== undefined
     ) {
-      // 訪客不能編輯任何內容；學生只能編輯自己發表的貼文；教師/管理員可管理
+      // 訪客或學生只能編輯自己發表的貼文；教師/管理員可管理
       if (!isAdmin && !isBoardOwner && !isAuthor) {
         return NextResponse.json({ error: '權限不足：您只能編輯自己發表的貼文' }, { status: 403 });
       }
@@ -199,6 +205,8 @@ export async function PATCH(request: NextRequest) {
       updates.attachment = attachment;
     }
     if (sectionId !== undefined) updates.sectionId = sectionId;
+    if (posX !== undefined) updates.posX = posX;
+    if (posY !== undefined) updates.posY = posY;
 
     const updated = await db.updatePost(postId, updates);
     return NextResponse.json({ success: true, post: updated });

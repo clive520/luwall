@@ -25,6 +25,7 @@ interface CreatePostModalProps {
   defaultSectionId?: string;
   initialAttachment?: MediaAttachment;
   initialMediaType?: 'none' | 'image' | 'audio' | 'link';
+  initialPos?: { x: number; y: number };
   currentUser: User | null;
   isOpen: boolean;
   onClose: () => void;
@@ -46,6 +47,7 @@ export function CreatePostModal({
   defaultSectionId,
   initialAttachment,
   initialMediaType = 'none',
+  initialPos,
   currentUser,
   isOpen,
   onClose,
@@ -349,6 +351,8 @@ export function CreatePostModal({
           authorName: currentUser ? currentUser.name : authorName.trim(),
           color: selectedColor,
           attachment: finalAttachment,
+          posX: initialPos?.x,
+          posY: initialPos?.y,
         }),
       });
 

@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Layers,
   LayoutGrid,
+  Paintbrush,
 } from 'lucide-react';
 
 interface BoardSettingsModalProps {
@@ -244,53 +245,73 @@ export function BoardSettingsModal({
               </div>
             </div>
 
-            {/* 看板呈現風格版型 */}
-            <div>
-              <label className="block text-xs font-black text-gray-900 mb-1.5">
-                看板呈現風格
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setLayoutType('wall')}
-                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
-                    layoutType === 'wall'
-                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
-                    <LayoutGrid className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black text-gray-900">磚牆</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
-                      便籤緊密自適應貼合，適合成果展覽、心得便利貼牆
+              {/* 看板呈現風格版型 */}
+              <div>
+                <label className="block text-xs font-black text-gray-900 mb-1.5">
+                  看板呈現風格
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLayoutType('wall')}
+                    className={`p-2.5 rounded-2xl border text-left flex flex-col gap-1.5 transition ${
+                      layoutType === 'wall'
+                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-xs font-black text-gray-900">磚牆</div>
                     </div>
-                  </div>
-                </button>
+                    <div className="text-[10px] text-gray-500 leading-tight">
+                      便籤自適應緊密貼合，適合成果展覽、心得牆
+                    </div>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setLayoutType('shelf')}
-                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
-                    layoutType === 'shelf'
-                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
-                >
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black text-gray-900">分欄</div>
-                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                  <button
+                    type="button"
+                    onClick={() => setLayoutType('shelf')}
+                    className={`p-2.5 rounded-2xl border text-left flex flex-col gap-1.5 transition ${
+                      layoutType === 'shelf'
+                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-xs font-black text-gray-900">分欄</div>
+                    </div>
+                    <div className="text-[10px] text-gray-500 leading-tight">
                       依主題直欄橫向滑動，適合分組討論與單元歸類
                     </div>
-                  </div>
-                </button>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLayoutType('canvas')}
+                    className={`p-2.5 rounded-2xl border text-left flex flex-col gap-1.5 transition ${
+                      layoutType === 'canvas'
+                        ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <div className="p-1.5 rounded-lg bg-amber-100 text-amber-800 shrink-0">
+                        <Paintbrush className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-xs font-black text-gray-900">自由</div>
+                    </div>
+                    <div className="text-[10px] text-gray-500 leading-tight">
+                      自由擺放與隨處拖曳，適合心智圖與發想白板
+                    </div>
+                  </button>
+                </div>
               </div>
-            </div>
 
             {/* 核心權限開關 */}
             <div className="space-y-2 pt-2 border-t border-gray-100">
