@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { User } from '@/types';
 import { ThemeSwitcher } from './ThemeSwitcher';
 import { ApplyTeacherModal } from './ApplyTeacherModal';
+import { UserProfileModal } from './UserProfileModal';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell } from 'lucide-react';
+import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell, UserCog } from 'lucide-react';
 
 interface NavbarProps {
   onOpenCreateBoard?: () => void;
@@ -18,6 +19,7 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   useEffect(() => {
@@ -162,7 +164,12 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
 
           {!loading && user ? (
             <div className="flex items-center gap-2 sm:gap-2.5">
-              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700">
+              <button
+                type="button"
+                onClick={() => setProfileModalOpen(true)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100/80 active:bg-amber-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-amber-200 dark:border-slate-700 transition cursor-pointer group text-left shadow-xs"
+                title="點擊管理會員資料、修改暱稱與密碼"
+              >
                 {user.role === 'admin' ? (
                   <Crown className="w-4 h-4 text-amber-600" />
                 ) : user.role === 'teacher' ? (
@@ -190,7 +197,8 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
                     )}
                   </div>
                 </div>
-              </div>
+                <UserCog className="w-3.5 h-3.5 text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition ml-0.5" />
+              </button>
 
               <button
                 onClick={handleLogout}
@@ -218,6 +226,17 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           onClose={() => setApplyModalOpen(false)}
           currentUser={user}
           onApplicationUpdated={(updatedUser) => {
+            setUser(updatedUser);
+          }}
+        />
+      )}
+
+      {user && (
+        <UserProfileModal
+          isOpen={profileModalOpen}
+          onClose={() => setProfileModalOpen(false)}
+          currentUser={user}
+          onUserUpdated={(updatedUser) => {
             setUser(updatedUser);
           }}
         />

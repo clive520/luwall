@@ -541,7 +541,7 @@ export const db = {
 
     return users;
   },
-  getUserById: (id: string): User | undefined => {
+  getUserById: (id: string): (User & { passwordHash?: string }) | undefined => {
     const users = db.getUsers();
     return users.find((u) => u.id === id);
   },
@@ -567,6 +567,25 @@ export const db = {
       syncUserToSupabase(user).catch(console.error);
     }
     return user;
+  },
+  updateUserProfile: (
+    userId: string,
+    updates: { name?: string; passwordHash?: string }
+  ): (User & { passwordHash?: string }) | undefined => {
+    const users = db.getUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) return undefined;
+    if (updates.name !== undefined) {
+      users[idx].name = updates.name.trim();
+    }
+    if (updates.passwordHash !== undefined) {
+      users[idx].passwordHash = updates.passwordHash;
+    }
+    writeJson(USERS_FILE, users, 'users');
+    if (isSupabaseConfigured()) {
+      syncUserToSupabase(users[idx]).catch(console.error);
+    }
+    return users[idx];
   },
   updateUserRole: (userId: string, role: UserRole): User | undefined => {
     const users = db.getUsers();

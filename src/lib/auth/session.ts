@@ -45,7 +45,9 @@ export async function getCurrentUser(): Promise<User | null> {
 
     const decoded = jwt.verify(token, SESSION_SECRET) as { id: string };
     const user = db.getUserById(decoded.id);
-    return user || null;
+    if (!user) return null;
+    const { passwordHash: _, ...safeUser } = user;
+    return safeUser;
   } catch {
     return null;
   }
