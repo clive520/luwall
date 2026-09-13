@@ -6,6 +6,7 @@ import {
   X,
   Sparkles,
   Layers,
+  LayoutGrid,
   ShieldCheck,
   UserCheck,
   Smile,
@@ -13,6 +14,7 @@ import {
   Globe,
   Lock,
 } from 'lucide-react';
+import { BoardLayoutType } from '@/types';
 
 interface CreateBoardModalProps {
   isOpen: boolean;
@@ -33,6 +35,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [coverColor, setCoverColor] = useState(COVER_GRADIENTS[0].value);
+  const [layoutType, setLayoutType] = useState<BoardLayoutType>('wall');
   const [isPublic, setIsPublic] = useState(true);
   const [allowGuest, setAllowGuest] = useState(true);
   const [requireApproval, setRequireApproval] = useState(false);
@@ -70,7 +73,7 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
           title: title.trim(),
           description: description.trim(),
           coverColor,
-          layoutType: 'shelf',
+          layoutType,
           isPublic,
           allowGuest,
           requireApproval,
@@ -179,6 +182,54 @@ export function CreateBoardModal({ isOpen, onClose, onBoardCreated }: CreateBoar
                     title={g.name}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* 看板風格版型 */}
+            <div>
+              <label className="block text-xs font-black text-gray-900 mb-1.5">
+                看板呈現風格
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('wall')}
+                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
+                    layoutType === 'wall'
+                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                    <LayoutGrid className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-gray-900">磚牆瀑布流 (Wall)</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      便籤自適應緊密排列，適合作品展、心得牆
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('shelf')}
+                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
+                    layoutType === 'shelf'
+                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-gray-900">分欄貨架 (Shelf)</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      依主題直欄橫向滑動，適合分組討論與單元歸類
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 

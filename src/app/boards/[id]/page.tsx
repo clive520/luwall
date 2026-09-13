@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Board, Post, User, Section, MediaAttachment } from '@/types';
 import { Navbar } from '@/components/common/Navbar';
 import { ShelfView } from '@/components/board/ShelfView';
+import { WallView } from '@/components/board/WallView';
+import { StreamView } from '@/components/board/StreamView';
 import { CreatePostModal } from '@/components/board/CreatePostModal';
 import { QRCodeModal } from '@/components/board/QRCodeModal';
 import { CreateBoardModal } from '@/components/board/CreateBoardModal';
@@ -20,6 +22,7 @@ import {
   UserCheck,
   Radio,
   Layers,
+  LayoutGrid,
   Settings,
   Globe,
   Lock,
@@ -265,6 +268,23 @@ export default function BoardPage({
     );
   }
 
+  // 即時切換看板版型（開板老師切換時自動同步至資料庫）
+  const handleToggleLayout = async (newLayout: 'shelf' | 'wall') => {
+    if (!board || board.layoutType === newLayout) return;
+    setBoard((prev) => (prev ? { ...prev, layoutType: newLayout } : null));
+    if (isOwner) {
+      try {
+        await fetch(`/api/boards/${board.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ layoutType: newLayout }),
+        });
+      } catch (err) {
+        console.error('更新看板版型失敗:', err);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
       <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />
@@ -343,6 +363,36 @@ export default function BoardPage({
 
             {/* 操作按鈕群（投影 QR Code、看板設定、新增卡片） */}
             <div className="flex flex-wrap items-center gap-2 sm:self-end">
+              {/* 版型切換快捷鍵（分欄 vs 磚牆瀑布流） */}
+              <div className="inline-flex items-center p-0.5 rounded-2xl bg-black/20 backdrop-blur border border-white/20 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayout('shelf')}
+                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                    (board.layoutType || 'shelf') === 'shelf'
+                      ? 'bg-white text-gray-900 shadow-xs'
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                  title="分欄貨架模式：依主題多欄直立展示"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">分欄貨架</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLayout('wall')}
+                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
+                    board.layoutType === 'wall'
+                      ? 'bg-white text-gray-900 shadow-xs'
+                      : 'text-white/80 hover:text-white'
+                  }`}
+                  title="磚牆瀑布流模式：卡片緊密自適應貼合"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">磚牆瀑布流</span>
+                </button>
+              </div>
+
               {/* QR Code 投影 */}
               <button
                 onClick={() => setIsQRCodeOpen(true)}
@@ -377,7 +427,7 @@ export default function BoardPage({
         </div>
       </div>
 
-      {/* 多主題分欄內容主體（支援比例縮放） */}
+      {/* 內容主體（支援比例縮放與動態版型切換） */}
       <main
         className="flex-1 w-full pb-16 transition-all duration-150 ease-out"
         style={
@@ -386,18 +436,44 @@ export default function BoardPage({
           } as React.CSSProperties
         }
       >
-        <ShelfView
-          board={board}
-          sections={sections}
-          posts={posts}
-          currentUser={currentUser}
-          isOwner={isOwner}
-          onPostClick={(post) => setSelectedPost(post)}
-          onOpenCreatePost={handleOpenCreatePost}
-          onPostUpdated={handlePostUpdated}
-          onPostDeleted={handlePostDeleted}
-          onSectionsUpdated={fetchBoardData}
-        />
+        {board.layoutType === 'wall' ? (
+          <WallView
+            board={board}
+            sections={sections}
+            posts={posts}
+            currentUser={currentUser}
+            isOwner={isOwner}
+            onPostClick={(post) => setSelectedPost(post)}
+            onOpenCreatePost={handleOpenCreatePost}
+            onPostUpdated={handlePostUpdated}
+            onPostDeleted={handlePostDeleted}
+            onSectionsUpdated={fetchBoardData}
+          />
+        ) : board.layoutType === 'stream' ? (
+          <StreamView
+            board={board}
+            posts={posts}
+            currentUser={currentUser}
+            isOwner={isOwner}
+            onPostClick={(post) => setSelectedPost(post)}
+            onOpenCreatePost={() => handleOpenCreatePost()}
+            onPostUpdated={handlePostUpdated}
+            onPostDeleted={handlePostDeleted}
+          />
+        ) : (
+          <ShelfView
+            board={board}
+            sections={sections}
+            posts={posts}
+            currentUser={currentUser}
+            isOwner={isOwner}
+            onPostClick={(post) => setSelectedPost(post)}
+            onOpenCreatePost={handleOpenCreatePost}
+            onPostUpdated={handlePostUpdated}
+            onPostDeleted={handlePostDeleted}
+            onSectionsUpdated={fetchBoardData}
+          />
+        )}
       </main>
 
       {/* 彈窗元件 */}

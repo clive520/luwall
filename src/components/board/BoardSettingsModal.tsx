@@ -1,8 +1,8 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Board } from '@/types';
+import { Board, BoardLayoutType } from '@/types';
 import {
   X,
   Settings,
@@ -14,6 +14,8 @@ import {
   Lock,
   Trash2,
   CheckCircle2,
+  Layers,
+  LayoutGrid,
 } from 'lucide-react';
 
 interface BoardSettingsModalProps {
@@ -42,6 +44,7 @@ export function BoardSettingsModal({
   const [title, setTitle] = useState(board.title);
   const [description, setDescription] = useState(board.description || '');
   const [coverColor, setCoverColor] = useState(board.coverColor || COVER_GRADIENTS[0].value);
+  const [layoutType, setLayoutType] = useState<BoardLayoutType>(board.layoutType || 'shelf');
   const [isPublic, setIsPublic] = useState(board.isPublic !== false);
   const [allowGuest, setAllowGuest] = useState(board.allowGuest !== false);
   const [requireApproval, setRequireApproval] = useState(board.requireApproval || false);
@@ -57,6 +60,7 @@ export function BoardSettingsModal({
       setTitle(board.title);
       setDescription(board.description || '');
       setCoverColor(board.coverColor || COVER_GRADIENTS[0].value);
+      setLayoutType(board.layoutType || 'shelf');
       setIsPublic(board.isPublic !== false);
       setAllowGuest(board.allowGuest !== false);
       setRequireApproval(board.requireApproval || false);
@@ -95,6 +99,7 @@ export function BoardSettingsModal({
           title: title.trim(),
           description: description.trim(),
           coverColor,
+          layoutType,
           isPublic,
           allowGuest,
           requireApproval,
@@ -236,6 +241,54 @@ export function BoardSettingsModal({
                     title={g.name}
                   />
                 ))}
+              </div>
+            </div>
+
+            {/* 看板呈現風格版型 */}
+            <div>
+              <label className="block text-xs font-black text-gray-900 mb-1.5">
+                看板呈現風格
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('wall')}
+                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
+                    layoutType === 'wall'
+                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                    <LayoutGrid className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-gray-900">磚牆瀑布流 (Wall)</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      便籤緊密自適應貼合，適合成果展覽、心得便利貼牆
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLayoutType('shelf')}
+                  className={`p-3 rounded-2xl border text-left flex items-start gap-2.5 transition ${
+                    layoutType === 'shelf'
+                      ? 'border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-gray-900">分欄貨架 (Shelf)</div>
+                    <div className="text-[10px] text-gray-500 mt-0.5 leading-tight">
+                      依主題直欄橫向滑動，適合分組討論與單元歸類
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
 
