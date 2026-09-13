@@ -266,6 +266,16 @@ export async function syncCommentToSupabase(comment: Comment) {
   }
 }
 
+export async function deleteCommentFromSupabase(id: string) {
+  const supabase = getSupabase();
+  if (!supabase) return;
+  try {
+    await supabase.from('comments').delete().eq('id', id);
+  } catch (err) {
+    console.error('Failed to delete comment from Supabase:', err);
+  }
+}
+
 // ==========================================
 // 啟動時自 Supabase 水合 (Hydrate) 載入全部資料
 // ==========================================

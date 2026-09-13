@@ -171,6 +171,10 @@ export function PostDetailModal({
 
   // 點讚
   const handleLike = async () => {
+    if (post.status === 'pending') {
+      alert('此便籤尚在等待老師同意中，審核通過後方可點讚！');
+      return;
+    }
     if (isLiking) return;
     setIsLiking(true);
     try {
@@ -185,6 +189,25 @@ export function PostDetailModal({
       }
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  // 刪除留言
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('確定要刪除這則留言嗎？')) return;
+    try {
+      const res = await fetch(`/api/posts/${post.id}/comments?commentId=${commentId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || '刪除失敗');
+      }
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+      onPostUpdated({ ...post, commentCount: Math.max(0, (post.commentCount || 0) - 1) });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '刪除留言失敗';
+      alert(msg);
     }
   };
 
@@ -516,12 +539,13 @@ export function PostDetailModal({
                 <div className="flex items-center gap-3 pt-1">
                   <button
                     onClick={handleLike}
-                    disabled={isLiking}
+                    disabled={isLiking || post.status === 'pending'}
+                    title={post.status === 'pending' ? '此便籤尚在等待老師審核中' : ''}
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition shadow-xs ${
                       post.likeCount > 0
                         ? 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                         : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-slate-700 hover:bg-gray-50'
-                    }`}
+                    } ${post.status === 'pending' ? 'opacity-60 cursor-not-allowed' : ''}`}
                   >
                     <Heart
                       className={`w-4 h-4 ${post.likeCount > 0 ? 'fill-red-500 text-red-500' : ''}`}
@@ -553,67 +577,93 @@ export function PostDetailModal({
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {comments.map((c) => (
-                      <div
-                        key={c.id}
-                        className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-2xs space-y-1"
-                      >
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-bold text-gray-900 dark:text-gray-200">
-                            {c.authorName}
-                          </span>
-                          <span className="text-[10px] text-gray-400">
-                            {formatDate(c.createdAt)}
-                          </span>
+                    {comments.map((c) => {
+                      const canDeleteComment = Boolean(
+                        currentUser &&
+                          (currentUser.id === c.authorId || isTeacher || currentUser.role === 'admin')
+                      );
+                      return (
+                        <div
+                          key={c.id}
+                          className="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-gray-100 dark:border-slate-700/60 shadow-2xs space-y-1 group"
+                        >
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-gray-900 dark:text-gray-200">
+                              {c.authorName}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-gray-400">
+                                {formatDate(c.createdAt)}
+                              </span>
+                              {canDeleteComment && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteComment(c.id)}
+                                  className="text-gray-400 hover:text-red-500 transition p-0.5 opacity-60 hover:opacity-100"
+                                  title="刪除留言"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap font-medium">
+                            {c.content}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed break-words whitespace-pre-wrap font-medium">
-                          {c.content}
-                        </p>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div ref={commentsEndRef} />
                   </div>
                 )}
               </div>
 
-              {/* 底部：留言輸入框 */}
-              <form
-                onSubmit={handleAddComment}
-                className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2"
-              >
-                {!currentUser && (
-                  <input
-                    type="text"
-                    required
-                    placeholder="你的名字或座號（訪客必填）"
-                    value={commentAuthor}
-                    onChange={(e) => setCommentAuthor(e.target.value)}
-                    className="w-full text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-hidden focus:border-amber-600 text-gray-900 dark:text-white"
-                  />
-                )}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    placeholder="寫下你的心得、提問或鼓勵..."
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    className="flex-1 text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 text-gray-900 dark:text-white"
-                  />
-                  <button
-                    type="submit"
-                    disabled={submittingComment || !newComment.trim()}
-                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black shadow-xs transition flex items-center gap-1 shrink-0"
-                  >
-                    {submittingComment ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Send className="w-3.5 h-3.5" />
-                    )}
-                    <span>送出</span>
-                  </button>
+              {/* 底部：留言輸入區（待審核時提示，審核通過後顯示表單） */}
+              {post.status === 'pending' ? (
+                <div className="p-4 border-t border-gray-100 dark:border-slate-800 bg-amber-50/70 dark:bg-amber-950/40 text-center">
+                  <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                    ⏳ 此便籤尚在等待老師審核中，審核通過後即開放留言交流！
+                  </p>
                 </div>
-              </form>
+              ) : (
+                <form
+                  onSubmit={handleAddComment}
+                  className="p-4 border-t border-gray-100 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2"
+                >
+                  {!currentUser && (
+                    <input
+                      type="text"
+                      required
+                      placeholder="你的名字或座號（訪客必填）*"
+                      value={commentAuthor}
+                      onChange={(e) => setCommentAuthor(e.target.value)}
+                      className="w-full text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3 py-2 outline-hidden focus:border-amber-600 text-gray-900 dark:text-white"
+                    />
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required
+                      placeholder="寫下你的心得、提問或鼓勵..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="flex-1 text-xs font-bold bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 outline-hidden focus:border-amber-600 text-gray-900 dark:text-white"
+                    />
+                    <button
+                      type="submit"
+                      disabled={submittingComment || !newComment.trim()}
+                      className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs font-black shadow-xs transition flex items-center gap-1 shrink-0"
+                    >
+                      {submittingComment ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>送出</span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

@@ -12,6 +12,18 @@ export async function POST(
     const body = await request.json();
     const { type = 'like', value } = body;
 
+    const post = db.getPostById(id);
+    if (!post) {
+      return NextResponse.json({ error: '找不到貼文' }, { status: 404 });
+    }
+
+    if (post.status === 'pending') {
+      return NextResponse.json(
+        { error: '此便籤尚在等待老師審核中，審核通過後方可進行互動' },
+        { status: 403 }
+      );
+    }
+
     // 訪客若無登入，使用隨機/IP識別
     const userId = user?.id || body.guestId || 'guest-user';
 

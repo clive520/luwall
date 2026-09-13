@@ -545,13 +545,15 @@ export default function AdminPage() {
                   >
                     查看看板
                   </Link>
-                  <button
-                    onClick={() => handleDeleteBoard(b.id, b.title)}
-                    className="p-1.5 rounded-xl text-red-500 hover:bg-red-50 transition"
-                    title="管理員強制刪除看板"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {(currentUser?.role === 'admin' || b.createdBy === currentUser?.id) && (
+                    <button
+                      onClick={() => handleDeleteBoard(b.id, b.title)}
+                      className="p-1.5 rounded-xl text-red-500 hover:bg-red-50 transition"
+                      title={currentUser?.role === 'admin' ? '管理員強制刪除看板' : '刪除我的看板'}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

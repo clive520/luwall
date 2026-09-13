@@ -13,6 +13,7 @@ import {
   syncUserToSupabase,
   deleteUserFromSupabase,
   syncCommentToSupabase,
+  deleteCommentFromSupabase,
   hydrateFromSupabase,
   fetchBoardFromSupabase,
   fetchSectionsFromSupabase,
@@ -642,6 +643,27 @@ export const db = {
       db.updatePost(post.id, { commentCount: (post.commentCount || 0) + 1 });
     }
     return comment;
+  },
+  getCommentById: (id: string): Comment | undefined => {
+    const comments = readJson<Comment[]>(COMMENTS_FILE, [], 'comments');
+    return comments.find((c) => c.id === id);
+  },
+  deleteComment: async (id: string): Promise<boolean> => {
+    const comments = readJson<Comment[]>(COMMENTS_FILE, [], 'comments');
+    const target = comments.find((c) => c.id === id);
+    if (!target) return false;
+
+    const filtered = comments.filter((c) => c.id !== id);
+    writeJson(COMMENTS_FILE, filtered, 'comments');
+    if (isSupabaseConfigured()) {
+      await deleteCommentFromSupabase(id);
+    }
+
+    const post = db.getPostById(target.postId);
+    if (post) {
+      db.updatePost(post.id, { commentCount: Math.max(0, (post.commentCount || 0) - 1) });
+    }
+    return true;
   },
 
   // Reactions
