@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { User } from '@/types';
 import {
   X,
@@ -34,6 +35,7 @@ export function UserProfileModal({
   currentUser,
   onUserUpdated,
 }: UserProfileModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [name, setName] = useState(currentUser.name || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -48,6 +50,10 @@ export function UserProfileModal({
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // 當 modal 開啟或 currentUser 改變時，重設表單狀態
   useEffect(() => {
     if (isOpen) {
@@ -61,7 +67,7 @@ export function UserProfileModal({
     }
   }, [isOpen, currentUser]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const isGoogle = currentUser.provider === 'google';
   const isSSO = currentUser.provider === 'luyang_sso';
@@ -146,25 +152,25 @@ export function UserProfileModal({
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 overflow-y-auto p-3 sm:p-4 flex flex-col items-center justify-start sm:justify-center bg-black/60 backdrop-blur-xs animate-fade-in"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full max-h-[88vh] flex flex-col shadow-2xl border border-amber-100 dark:border-slate-800 overflow-hidden relative my-auto">
+      <div className="relative my-auto w-full max-w-md max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-amber-100 dark:border-slate-800 overflow-hidden">
         {/* 頂部固定標頭 */}
-        <div className="px-5 py-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300">
+        <div className="px-5 py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-gray-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300">
               <UserCog className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-gray-900 dark:text-gray-100 leading-tight">
+              <h3 className="text-base font-black text-gray-900 dark:text-gray-100 leading-tight">
                 會員資料與設定
               </h3>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                 修改個人顯示暱稱與帳號管理
               </p>
             </div>
@@ -179,41 +185,41 @@ export function UserProfileModal({
           </button>
         </div>
 
-        {/* 可滾動主體表單 */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col">
-          <div className="p-4 sm:p-5 space-y-3.5 flex-1">
+        {/* 主體表單與滾動區 */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="p-5 space-y-4 overflow-y-auto flex-1">
             {/* 錯誤反饋提示 */}
             {error && (
-              <div className="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-xs font-bold text-red-600 dark:text-red-300 animate-fade-in flex items-center gap-2">
-                <X className="w-3.5 h-3.5 shrink-0 text-red-500" />
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-xs font-bold text-red-600 dark:text-red-300 animate-fade-in flex items-center gap-2">
+                <X className="w-4 h-4 shrink-0 text-red-500" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* 成功反饋提示 */}
             {successMsg && (
-              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-700 dark:text-emerald-300 animate-fade-in flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-600" />
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs font-bold text-emerald-700 dark:text-emerald-300 animate-fade-in flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>{successMsg}</span>
               </div>
             )}
 
             {/* 精簡帳號身分條 (Compact Account Bar) */}
-            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/70 flex items-center justify-between text-xs">
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/70 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
                 {currentUser.role === 'admin' ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
-                    <Crown className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-md bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
+                    <Crown className="w-3.5 h-3.5" />
                     管理員
                   </span>
                 ) : currentUser.role === 'teacher' ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                    <Briefcase className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                    <Briefcase className="w-3.5 h-3.5" />
                     教師
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
-                    <GraduationCap className="w-3 h-3" />
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300">
+                    <GraduationCap className="w-3.5 h-3.5" />
                     學生
                   </span>
                 )}
@@ -223,18 +229,18 @@ export function UserProfileModal({
               </div>
 
               {isGoogle ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 shrink-0">
-                  <Globe className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950 text-sky-800 dark:text-sky-300 shrink-0">
+                  <Globe className="w-3.5 h-3.5" />
                   Google 登入
                 </span>
               ) : isSSO ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 shrink-0">
-                  <School className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-300 shrink-0">
+                  <School className="w-3.5 h-3.5" />
                   校園 SSO
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shrink-0">
-                  <Lock className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200 shrink-0">
+                  <Lock className="w-3.5 h-3.5" />
                   帳號密碼
                 </span>
               )}
@@ -242,7 +248,7 @@ export function UserProfileModal({
 
             {/* 1. 修改暱稱 / 姓名（所有身分皆可修改） */}
             <div>
-              <label className="block text-xs font-black text-gray-900 dark:text-gray-100 mb-1">
+              <label className="block text-xs font-black text-gray-900 dark:text-gray-100 mb-1.5">
                 顯示暱稱 / 中文姓名 *
               </label>
               <input
@@ -252,9 +258,9 @@ export function UserProfileModal({
                 placeholder="例如：林老師、王小明"
                 maxLength={50}
                 required
-                className="w-full px-3.5 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
               />
-              <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
                 此名稱將呈現在您所發表的便籤、評分、回饋與討論留言中
               </p>
             </div>
@@ -266,7 +272,7 @@ export function UserProfileModal({
                 <div className="p-1.5 rounded-xl bg-white dark:bg-sky-900 shadow-xs text-sky-600 dark:text-sky-300 shrink-0">
                   <Globe className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-sky-800 dark:text-sky-300 leading-tight">
+                <p className="text-xs text-sky-800 dark:text-sky-300 leading-tight">
                   Google 帳號由 Google 集中身分驗證與安全保護，<strong>無須且無法修改密碼</strong>。此處僅供自訂顯示暱稱。
                 </p>
               </div>
@@ -276,34 +282,34 @@ export function UserProfileModal({
                 <div className="p-1.5 rounded-xl bg-white dark:bg-indigo-900 shadow-xs text-indigo-600 dark:text-indigo-300 shrink-0">
                   <School className="w-4 h-4" />
                 </div>
-                <p className="text-[11px] text-indigo-800 dark:text-indigo-300 leading-tight">
+                <p className="text-xs text-indigo-800 dark:text-indigo-300 leading-tight">
                   校園 SSO 帳號由學校入口網統一管理，密碼請至入口網站變更，此處僅能自訂顯示暱稱。
                 </p>
               </div>
             ) : (
-              /* 一般本地帳號密碼修改區塊（支援折疊展開，避免高度過高） */
-              <div className="pt-2 border-t border-gray-100 dark:border-slate-800 space-y-2.5">
+              /* 一般本地帳號密碼修改區塊（支援折疊展開） */
+              <div className="pt-2 border-t border-gray-100 dark:border-slate-800 space-y-3">
                 <button
                   type="button"
                   onClick={() => setShowPasswordSection(!showPasswordSection)}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 transition text-left text-xs font-bold text-gray-800 dark:text-gray-200"
+                  className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-gray-200 dark:border-slate-700 transition text-left text-xs font-bold text-gray-800 dark:text-gray-200"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-amber-600" />
                     <span>變更登入密碼 (選填)</span>
                   </div>
                   {showPasswordSection ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-gray-400" />
+                    <ChevronUp className="w-4 h-4 text-gray-400" />
                   ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
                   )}
                 </button>
 
                 {showPasswordSection && (
-                  <div className="space-y-2.5 pt-1 animate-fade-in">
+                  <div className="space-y-3 pt-1 animate-fade-in">
                     {/* 目前密碼 */}
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                         目前密碼 *
                       </label>
                       <div className="relative">
@@ -312,21 +318,21 @@ export function UserProfileModal({
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           placeholder="輸入目前的舊密碼"
-                          className="w-full px-3 py-1.5 pr-9 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                         >
-                          {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
 
                     {/* 新密碼 */}
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                         新密碼（至少 6 個字元）*
                       </label>
                       <div className="relative">
@@ -336,21 +342,21 @@ export function UserProfileModal({
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="設定新的登入密碼"
                           minLength={6}
-                          className="w-full px-3 py-1.5 pr-9 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
                         />
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                         >
-                          {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
 
                     {/* 確認新密碼 */}
                     <div>
-                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
                         再次確認新密碼 *
                       </label>
                       <div className="relative">
@@ -360,14 +366,14 @@ export function UserProfileModal({
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="再次輸入新密碼以防打錯"
                           minLength={6}
-                          className="w-full px-3 py-1.5 pr-9 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                         >
-                          {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>
@@ -378,19 +384,19 @@ export function UserProfileModal({
           </div>
 
           {/* 底部按鈕區 */}
-          <div className="p-3.5 sm:p-4 bg-gray-50/90 dark:bg-slate-900/90 border-t border-gray-100 dark:border-slate-800 flex items-center justify-end gap-2 shrink-0">
+          <div className="p-4 bg-gray-50/90 dark:bg-slate-900/90 border-t border-gray-100 dark:border-slate-800 flex items-center justify-end gap-2.5 shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-800 transition disabled:opacity-50"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-slate-800 transition disabled:opacity-50"
             >
               取消
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black shadow-md shadow-amber-200 dark:shadow-none transition disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black shadow-md shadow-amber-200 dark:shadow-none transition disabled:opacity-50"
             >
               {submitting ? (
                 <>
@@ -399,7 +405,7 @@ export function UserProfileModal({
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <ShieldCheck className="w-4 h-4" />
                   <span>儲存變更</span>
                 </>
               )}
@@ -407,6 +413,7 @@ export function UserProfileModal({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
