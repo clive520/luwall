@@ -528,11 +528,21 @@ export default function BoardPage({
       {/* 內容主體（支援比例縮放、動態版型切換與全螢幕） */}
       <main
         className={`w-full transition-all duration-150 ease-out ${
-          isFullscreen ? 'h-screen overflow-auto' : 'flex-1 pb-16'
+          isFullscreen
+            ? board.layoutType === 'canvas'
+              ? 'overflow-hidden'
+              : 'overflow-y-auto'
+            : 'flex-1 pb-16'
         }`}
         style={
           {
             zoom: `${zoomLevel}%`,
+            minHeight: isFullscreen
+              ? `calc(100vh * 100 / ${zoomLevel})`
+              : `calc((100vh - 160px) * 100 / ${zoomLevel})`,
+            height: isFullscreen && board.layoutType === 'canvas'
+              ? `calc(100vh * 100 / ${zoomLevel})`
+              : undefined,
           } as React.CSSProperties
         }
       >
@@ -544,6 +554,7 @@ export default function BoardPage({
             currentUser={currentUser}
             isOwner={isOwner}
             isFullscreen={isFullscreen}
+            zoomLevel={zoomLevel}
             onPostClick={(post) => setSelectedPost(post)}
             onOpenCreatePost={handleOpenCreatePost}
             onPostUpdated={handlePostUpdated}

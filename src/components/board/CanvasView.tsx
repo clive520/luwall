@@ -30,6 +30,7 @@ interface CanvasViewProps {
   onPostDeleted: (postId: string) => void;
   onSectionsUpdated: () => void;
   isFullscreen?: boolean;
+  zoomLevel?: number;
 }
 
 export function CanvasView({
@@ -39,6 +40,7 @@ export function CanvasView({
   currentUser,
   isOwner,
   isFullscreen = false,
+  zoomLevel = 100,
   onPostClick,
   onOpenCreatePost,
   onPostUpdated,
@@ -111,6 +113,8 @@ export function CanvasView({
     };
   };
 
+  const zoomScale = Math.max(0.1, (zoomLevel || 100) / 100);
+
   // 雙擊畫布空白處直接貼便籤
   const handleCanvasDoubleClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.post-card-container')) {
@@ -118,8 +122,8 @@ export function CanvasView({
     }
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const canvasX = Math.round(e.clientX - rect.left - panOffset.x);
-    const canvasY = Math.round(e.clientY - rect.top - panOffset.y);
+    const canvasX = Math.round((e.clientX - rect.left) / zoomScale - panOffset.x);
+    const canvasY = Math.round((e.clientY - rect.top) / zoomScale - panOffset.y);
 
     onOpenCreatePost(undefined, undefined, { x: Math.max(20, canvasX), y: Math.max(20, canvasY) });
   };
@@ -145,8 +149,8 @@ export function CanvasView({
     const handleMouseMove = (e: MouseEvent) => {
       // 處理畫布平移
       if (isPanning) {
-        const dx = e.clientX - panStartRef.current.mouseX;
-        const dy = e.clientY - panStartRef.current.mouseY;
+        const dx = (e.clientX - panStartRef.current.mouseX) / zoomScale;
+        const dy = (e.clientY - panStartRef.current.mouseY) / zoomScale;
         setPanOffset({
           x: panStartRef.current.startX + dx,
           y: panStartRef.current.startY + dy,
@@ -156,8 +160,8 @@ export function CanvasView({
 
       // 處理卡片拖曳
       if (activeDragRef.current) {
-        const dx = e.clientX - activeDragRef.current.startMouseX;
-        const dy = e.clientY - activeDragRef.current.startMouseY;
+        const dx = (e.clientX - activeDragRef.current.startMouseX) / zoomScale;
+        const dy = (e.clientY - activeDragRef.current.startMouseY) / zoomScale;
         const newX = Math.max(20, Math.round(activeDragRef.current.initialCardX + dx));
         const newY = Math.max(20, Math.round(activeDragRef.current.initialCardY + dy));
 
@@ -220,16 +224,20 @@ export function CanvasView({
     ? posts.filter((p) => p.status === 'pending')
     : posts;
 
+  const canvasHeight = isFullscreen
+    ? `calc(100vh * 100 / ${zoomLevel})`
+    : `calc((100vh - 160px) * 100 / ${zoomLevel})`;
+
   return (
-    <div className="w-full relative overflow-hidden select-none">
+    <div className="w-full h-full relative overflow-hidden select-none">
       {/* 畫布視窗容器 */}
       <div
         ref={containerRef}
         onMouseDown={handleCanvasMouseDown}
         onDoubleClick={handleCanvasDoubleClick}
         style={{
-          height: isFullscreen ? '100vh' : 'calc(100vh - 160px)',
-          minHeight: isFullscreen ? '100vh' : '620px',
+          height: canvasHeight,
+          minHeight: canvasHeight,
           cursor: isPanning ? 'grabbing' : 'default',
           backgroundImage:
             'radial-gradient(circle, #cbd5e1 1.5px, transparent 1.5px)',
@@ -268,8 +276,8 @@ export function CanvasView({
           <span>💡 按住空白處可平移畫布，雙擊空白處可快速貼便籤，拖曳頂部手把可隨意移動位置</span>
         </div>
 
-        {/* 浮動控制列：右下角視角歸位與貼便籤捷徑 */}
-        <div className="absolute bottom-5 right-6 z-30 flex items-center gap-2">
+        {/* 浮動控制列：右下角視角歸位與貼便籤捷徑（避開右側縮放控制器） */}
+        <div className="absolute bottom-5 right-52 sm:right-56 z-30 flex items-center gap-2">
           <button
             onClick={handleResetView}
             className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 text-gray-700 dark:text-gray-200 text-xs font-black shadow-lg backdrop-blur border border-black/5 dark:border-white/10 transition active:scale-95"
