@@ -19,8 +19,8 @@ export async function GET(
   const isBoardOwner = Boolean(user && user.id === board.createdBy);
   const isTeacher = user?.role === 'teacher';
 
-  // 審核權限：看板擁有者、教師或管理員可審核貼文
-  const canReview = isAdmin || isBoardOwner || isTeacher;
+  // 審核權限：嚴格限定只有看板的主人（成立看板的老師）或系統管理員才能看到與審核待審核貼文
+  const canReview = isBoardOwner || isAdmin;
   // 看板擁有權：嚴格限定為開設此看板的人 (或系統管理員)
   const isOwner = isBoardOwner || isAdmin;
 

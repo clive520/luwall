@@ -265,8 +265,6 @@ export default function BoardPage({
     );
   }
 
-  const isTeacherOrAdmin = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/30 via-white to-amber-50/20 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex flex-col">
       <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />

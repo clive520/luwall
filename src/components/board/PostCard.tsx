@@ -50,6 +50,7 @@ export function PostCard({
 
   // 身分與權限判斷
   const isAdmin = currentUser?.role === 'admin';
+  const isOwnerOrAdmin = isOwner || isAdmin;
   const isTeacher = isOwner || currentUser?.role === 'teacher' || isAdmin;
   const isAuthor = currentUser && post.authorId && currentUser.id === post.authorId;
 
@@ -247,7 +248,7 @@ export function PostCard({
       {post.status === 'pending' && (
         <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-amber-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 z-10 animate-pulse">
           <Clock className="w-3.5 h-3.5 animate-spin shrink-0" />
-          <span>等待老師同意中</span>
+          <span>{isOwnerOrAdmin ? '待您審核' : '等待老師同意中'}</span>
         </div>
       )}
 
@@ -366,8 +367,8 @@ export function PostCard({
         )}
       </div>
 
-      {/* 審核操作區（僅看板教師或管理員可操作） */}
-      {post.status === 'pending' && isTeacher && (
+      {/* 審核操作區（僅看板擁有者教師或系統管理員可操作） */}
+      {post.status === 'pending' && isOwnerOrAdmin && (
         <div className="mt-4 p-2.5 bg-amber-100/80 rounded-2xl border border-amber-300 flex items-center justify-between">
           <span className="text-xs font-bold text-amber-900">
             學生發表待審核
@@ -387,8 +388,8 @@ export function PostCard({
         </div>
       )}
 
-      {/* 學生/發布者提示（若非教師） */}
-      {post.status === 'pending' && !isTeacher && (
+      {/* 學生/發布者提示（若非看板擁有者/管理員） */}
+      {post.status === 'pending' && !isOwnerOrAdmin && (
         <div className="mt-4 p-3 bg-amber-50/90 rounded-2xl border border-amber-300 flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-xs">
           <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
           <div className="leading-tight">
@@ -450,7 +451,7 @@ export function PostCard({
               {comments.map((c) => {
                 const canDeleteComment = Boolean(
                   currentUser &&
-                    (currentUser.id === c.authorId || isTeacher || currentUser.role === 'admin')
+                    (currentUser.id === c.authorId || isOwnerOrAdmin)
                 );
                 return (
                   <div key={c.id} className="bg-white/80 p-2.5 rounded-xl text-xs shadow-2xs group/comment flex items-start justify-between gap-2">

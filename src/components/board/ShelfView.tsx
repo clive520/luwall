@@ -103,7 +103,6 @@ export function ShelfView({
   };
 
   const isOwnerOrAdmin = isOwner || currentUser?.role === 'admin';
-  const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
   const pendingCount = posts.filter((p) => p.status === 'pending').length;
 
   // 新增主題欄位
@@ -169,8 +168,8 @@ export function ShelfView({
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-      {/* 審核提醒列（若為教師） */}
-      {isTeacher && pendingCount > 0 && (
+      {/* 審核提醒列（若為看板擁有者或管理員） */}
+      {isOwnerOrAdmin && pendingCount > 0 && (
         <div className="max-w-7xl mx-auto mb-6 p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
             <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
@@ -186,8 +185,8 @@ export function ShelfView({
         </div>
       )}
 
-      {/* 學生視角：若有待審核的便籤，提示正在等待老師同意 */}
-      {!isTeacher && pendingCount > 0 && (
+      {/* 學生/非板主視角：若有待審核的便籤，提示正在等待老師同意 */}
+      {!isOwnerOrAdmin && pendingCount > 0 && (
         <div className="max-w-7xl mx-auto mb-6 p-3.5 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 flex items-center gap-2.5 text-xs font-bold text-amber-900 dark:text-amber-200 shadow-xs">
           <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
           <span>您有 {pendingCount} 則發布的便籤正在「等待老師同意中」，審核通過後即會公開展示！</span>

@@ -28,7 +28,7 @@ export function StreamView({
 }: StreamViewProps) {
   const [filterPendingOnly, setFilterPendingOnly] = useState(false);
 
-  const isTeacher = isOwner || currentUser?.role === 'teacher' || currentUser?.role === 'admin';
+  const isOwnerOrAdmin = isOwner || currentUser?.role === 'admin';
 
   const pendingCount = posts.filter((p) => p.status === 'pending').length;
   const displayedPosts = filterPendingOnly
@@ -64,8 +64,8 @@ export function StreamView({
         </button>
       </div>
 
-      {/* 課堂審核過濾列（若是教師且有待審核貼文） */}
-      {isTeacher && pendingCount > 0 && (
+      {/* 課堂審核過濾列（若是看板擁有者或管理員且有待審核貼文） */}
+      {isOwnerOrAdmin && pendingCount > 0 && (
         <div className="mb-6 p-3 rounded-2xl bg-amber-50 border border-amber-300 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
             <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
@@ -81,8 +81,8 @@ export function StreamView({
         </div>
       )}
 
-      {/* 學生視角：若有待審核的便籤，提示正在等待老師同意 */}
-      {!isTeacher && pendingCount > 0 && (
+      {/* 學生/非板主視角：若有待審核的便籤，提示正在等待老師同意 */}
+      {!isOwnerOrAdmin && pendingCount > 0 && (
         <div className="mb-6 p-3.5 rounded-2xl bg-amber-50/90 border border-amber-300 flex items-center gap-2.5 text-xs font-bold text-amber-900 shadow-xs">
           <Clock className="w-4 h-4 text-amber-600 animate-spin shrink-0" />
           <span>您有 {pendingCount} 則發布的便籤正在「等待老師同意中」，審核通過後即會公開展示！</span>

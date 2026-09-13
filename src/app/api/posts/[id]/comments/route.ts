@@ -41,8 +41,7 @@ export async function POST(
 
     const isAdmin = user?.role === 'admin';
     const isBoardOwner = Boolean(user && user.id === board.createdBy);
-    const isTeacher = user?.role === 'teacher';
-    const canReview = isAdmin || isBoardOwner || isTeacher;
+    const canReview = isBoardOwner || isAdmin;
 
     // 檢查 1：若便籤狀態為待審核 (pending)，僅開板老師/管理員可留言，一般使用者/訪客需等審核通過
     if (post.status === 'pending' && !canReview) {

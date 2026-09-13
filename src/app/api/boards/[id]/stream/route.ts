@@ -13,8 +13,7 @@ export async function GET(
 
   const isAdmin = user?.role === 'admin';
   const isBoardOwner = Boolean(user && board && user.id === board.createdBy);
-  const isTeacher = user?.role === 'teacher';
-  const canReview = isAdmin || isBoardOwner || isTeacher;
+  const canReview = isBoardOwner || isAdmin;
 
   const guestPostsParam = request.nextUrl.searchParams.get('guestPosts');
   const guestPostIds = guestPostsParam ? guestPostsParam.split(',').filter(Boolean) : [];

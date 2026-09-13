@@ -68,6 +68,7 @@ export function PostDetailModal({
 
   // 身分與權限判定
   const isAdmin = currentUser?.role === 'admin';
+  const isOwnerOrAdmin = isOwner || isAdmin;
   const isTeacher = isOwner || currentUser?.role === 'teacher' || isAdmin;
   const isAuthor = Boolean(currentUser && post?.authorId && currentUser.id === post.authorId);
   const canDelete = isAdmin || isOwner || isAuthor;
@@ -343,7 +344,7 @@ export function PostDetailModal({
               {post.status === 'pending' && (
                 <span className="px-2.5 py-1 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center gap-1.5 shadow-xs">
                   <Clock className="w-3.5 h-3.5 animate-spin" />
-                  {isTeacher ? '待審核' : '等待老師同意中'}
+                  {isOwnerOrAdmin ? '待您審核' : '等待老師同意中'}
                 </span>
               )}
             </div>
@@ -506,8 +507,8 @@ export function PostDetailModal({
                   </div>
                 </div>
 
-                {/* 待審核操作（教師限定） */}
-                {post.status === 'pending' && isTeacher && (
+                {/* 待審核操作（看板擁有者教師/管理員限定） */}
+                {post.status === 'pending' && isOwnerOrAdmin && (
                   <div className="p-3 bg-amber-100/90 dark:bg-amber-950/50 rounded-2xl border border-amber-300 dark:border-amber-800 flex items-center justify-between">
                     <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
                       學生發表待審核
@@ -522,8 +523,8 @@ export function PostDetailModal({
                   </div>
                 )}
 
-                {/* 待審核提示（學生/作者視角） */}
-                {post.status === 'pending' && !isTeacher && (
+                {/* 待審核提示（學生/作者/非板主視角） */}
+                {post.status === 'pending' && !isOwnerOrAdmin && (
                   <div className="p-3.5 bg-amber-100/90 dark:bg-amber-950/60 rounded-2xl border border-amber-300 dark:border-amber-800 flex items-center gap-3 text-amber-950 dark:text-amber-200 text-xs font-bold shadow-xs">
                     <Clock className="w-5 h-5 text-amber-600 animate-spin shrink-0" />
                     <div className="leading-relaxed">
@@ -580,7 +581,7 @@ export function PostDetailModal({
                     {comments.map((c) => {
                       const canDeleteComment = Boolean(
                         currentUser &&
-                          (currentUser.id === c.authorId || isTeacher || currentUser.role === 'admin')
+                          (currentUser.id === c.authorId || isOwnerOrAdmin)
                       );
                       return (
                         <div
