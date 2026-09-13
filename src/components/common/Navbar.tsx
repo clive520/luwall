@@ -73,7 +73,8 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xs transition-colors">
+    <>
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xs transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo 與品牌 */}
         <Link href="/" className="flex items-center gap-3 group">
@@ -219,28 +220,29 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
           ) : null}
         </div>
       </div>
-
-      {user && (
-        <ApplyTeacherModal
-          isOpen={applyModalOpen}
-          onClose={() => setApplyModalOpen(false)}
-          currentUser={user}
-          onApplicationUpdated={(updatedUser) => {
-            setUser(updatedUser);
-          }}
-        />
-      )}
-
-      {user && (
-        <UserProfileModal
-          isOpen={profileModalOpen}
-          onClose={() => setProfileModalOpen(false)}
-          currentUser={user}
-          onUserUpdated={(updatedUser) => {
-            setUser(updatedUser);
-          }}
-        />
-      )}
     </header>
-  );
+
+    {user && (
+      <ApplyTeacherModal
+        isOpen={applyModalOpen}
+        onClose={() => setApplyModalOpen(false)}
+        currentUser={user}
+        onApplicationUpdated={(updatedUser) => {
+          setUser(updatedUser);
+        }}
+      />
+    )}
+
+    {user && (
+      <UserProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        currentUser={user}
+        onUserUpdated={(updatedUser) => {
+          setUser(updatedUser);
+        }}
+      />
+    )}
+  </>
+);
 }
