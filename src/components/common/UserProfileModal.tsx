@@ -258,7 +258,7 @@ export function UserProfileModal({
                 placeholder="例如：林老師、王小明"
                 maxLength={50}
                 required
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border-2 border-gray-300 bg-white text-gray-950 text-sm font-bold placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
                 此名稱將呈現在您所發表的便籤、評分、回饋與討論留言中
@@ -318,7 +318,7 @@ export function UserProfileModal({
                           value={currentPassword}
                           onChange={(e) => setCurrentPassword(e.target.value)}
                           placeholder="輸入目前的舊密碼"
-                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border-2 border-gray-300 bg-white text-gray-950 text-xs font-bold placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition"
                         />
                         <button
                           type="button"
@@ -342,7 +342,7 @@ export function UserProfileModal({
                           onChange={(e) => setNewPassword(e.target.value)}
                           placeholder="設定新的登入密碼"
                           minLength={6}
-                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border-2 border-gray-300 bg-white text-gray-950 text-xs font-bold placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition"
                         />
                         <button
                           type="button"
@@ -366,7 +366,7 @@ export function UserProfileModal({
                           onChange={(e) => setConfirmPassword(e.target.value)}
                           placeholder="再次輸入新密碼以防打錯"
                           minLength={6}
-                          className="w-full px-3.5 py-2 pr-10 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
+                          className="w-full px-3.5 py-2 pr-10 rounded-xl border-2 border-gray-300 bg-white text-gray-950 text-xs font-bold placeholder:text-gray-400 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200 transition"
                         />
                         <button
                           type="button"

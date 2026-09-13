@@ -99,30 +99,24 @@ textarea::placeholder,
   font-weight: 500 !important;
 }
 
-/* 4. 若輸入框特別指定了深色背景（如 dark:bg-slate-800 等），文字才轉為高亮白色 */
-input[class*="bg-slate-8"],
-input[class*="bg-slate-9"],
-input[class*="bg-gray-8"],
-input[class*="bg-gray-9"],
-input[class*="bg-zinc-8"],
-input[class*="bg-zinc-9"],
-textarea[class*="bg-slate-8"],
-textarea[class*="bg-slate-9"],
-textarea[class*="bg-gray-8"],
-textarea[class*="bg-gray-9"],
-textarea[class*="bg-zinc-8"],
-textarea[class*="bg-zinc-9"] {
+/* 4. 只有在黑夜/深海主題或明確處於深色模式下，非白色輸入框文字才轉為高亮白色 */
+[data-theme="night"] input:not(.bg-white),
+[data-theme="night"] textarea:not(.bg-white),
+[data-theme="ocean"] input:not(.bg-white),
+[data-theme="ocean"] textarea:not(.bg-white),
+.dark input:not(.bg-white),
+.dark textarea:not(.bg-white) {
   color: #f8fafc !important;
   -webkit-text-fill-color: #f8fafc !important;
   caret-color: #f59e0b !important;
 }
 
-input[class*="bg-slate-8"]::placeholder,
-input[class*="bg-slate-9"]::placeholder,
-input[class*="bg-gray-8"]::placeholder,
-input[class*="bg-gray-9"]::placeholder,
-textarea[class*="bg-slate-8"]::placeholder,
-textarea[class*="bg-slate-9"]::placeholder {
+[data-theme="night"] input:not(.bg-white)::placeholder,
+[data-theme="night"] textarea:not(.bg-white)::placeholder,
+[data-theme="ocean"] input:not(.bg-white)::placeholder,
+[data-theme="ocean"] textarea:not(.bg-white)::placeholder,
+.dark input:not(.bg-white)::placeholder,
+.dark textarea:not(.bg-white)::placeholder {
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
   opacity: 1 !important;
