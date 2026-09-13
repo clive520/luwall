@@ -149,23 +149,23 @@ export async function ensureHydrated(force = false): Promise<void> {
     try {
       const data = await hydrateFromSupabase();
       if (data) {
-        if (data.boards && data.boards.length > 0) {
+        if (Array.isArray(data.boards)) {
           memoryStore.boards = data.boards;
           writeJson(BOARDS_FILE, data.boards, 'boards');
         }
-        if (data.sections && data.sections.length > 0) {
+        if (Array.isArray(data.sections)) {
           memoryStore.sections = data.sections;
           writeJson(SECTIONS_FILE, data.sections, 'sections');
         }
-        if (data.posts && data.posts.length > 0) {
+        if (Array.isArray(data.posts)) {
           memoryStore.posts = data.posts;
           writeJson(POSTS_FILE, data.posts, 'posts');
         }
-        if (data.users && data.users.length > 0) {
+        if (Array.isArray(data.users) && data.users.length > 0) {
           memoryStore.users = data.users;
           writeJson(USERS_FILE, data.users, 'users');
         }
-        if (data.comments && data.comments.length > 0) {
+        if (Array.isArray(data.comments)) {
           memoryStore.comments = data.comments;
           writeJson(COMMENTS_FILE, data.comments, 'comments');
         }
@@ -184,129 +184,17 @@ if (isSupabaseConfigured()) {
   ensureHydrated().catch(() => {});
 }
 
-const DEFAULT_BOARD: Board = {
-  id: 'demo-stream-board',
-  title: '四年甲班・自然觀察與生活筆記 🌿',
-  description: '同學們好！請挑選相應主題分享你在校園或家裡觀察到的小植物、小昆蟲，可上傳照片、錄音或寫下心得！',
-  coverColor: 'from-emerald-500 to-teal-700',
-  layoutType: 'shelf',
-  allowGuest: true,
-  isPublic: true,
-  requireApproval: false,
-  reactionType: 'like',
-  profanityFilter: true,
-  createdBy: 'teacher-luyang-001',
-  creatorName: '林老師',
-  createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  updatedAt: new Date().toISOString(),
-};
-
-// 預設三大主題分類
-const DEFAULT_SECTIONS: Section[] = [
-  {
-    id: 'sec-nature-plants',
-    boardId: 'demo-stream-board',
-    title: '校園植物觀察區 🌿',
-    orderIndex: 0,
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'sec-nature-insects',
-    boardId: 'demo-stream-board',
-    title: '昆蟲小天地 🐞',
-    orderIndex: 1,
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'sec-nature-qa',
-    boardId: 'demo-stream-board',
-    title: '心得與提問交流 💬',
-    orderIndex: 2,
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-];
-
-const DEFAULT_POSTS: Post[] = [
-  {
-    id: 'post-1',
-    boardId: 'demo-stream-board',
-    sectionId: 'sec-nature-qa',
-    authorId: 'teacher-luyang-001',
-    authorName: '林老師（板主）',
-    isAuthorTeacher: true,
-    title: '📢 觀察提示與注意事項',
-    content: '1. 觀察時請愛護大自然，不要隨意折採植物。\n2. 拍照時注意光線。\n3. 大家可以試著使用「錄音」功能，唸出你的觀察心得喔！',
-    color: '#fef08a',
-    status: 'approved',
-    orderIndex: 0,
-    likeCount: 5,
-    upvotes: 5,
-    downvotes: 0,
-    starAverage: 5,
-    starCount: 1,
-    commentCount: 2,
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'post-2',
-    boardId: 'demo-stream-board',
-    sectionId: 'sec-nature-insects',
-    authorName: '陳小明 (座號 03)',
-    title: '操場角落發現的瓢蟲 🐞',
-    content: '今天下課在司令台後面的杜鵑花叢葉子上，看到一隻七星瓢蟲！背上的紅色殼好亮，數一數真的有七個黑點點耶。',
-    color: '#fed7aa',
-    attachment: {
-      type: 'image',
-      url: 'https://images.unsplash.com/photo-1534067783941-51c9c23ecefd?auto=format&fit=crop&w=600&q=80',
-      title: '七星瓢蟲近照',
-    },
-    status: 'approved',
-    orderIndex: 0,
-    likeCount: 8,
-    upvotes: 8,
-    downvotes: 0,
-    starAverage: 4.8,
-    starCount: 4,
-    commentCount: 1,
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'post-3',
-    boardId: 'demo-stream-board',
-    sectionId: 'sec-nature-plants',
-    authorName: '李小華 (座號 12)',
-    title: '校門口的大榕樹氣根 🌳',
-    content: '大榕樹的氣根垂下來垂到泥土裡，好像好多條鬍鬚一樣！我查了資料，氣根碰觸到泥土後會慢慢變成粗壯的支柱根喔。',
-    color: '#bbf7d0',
-    attachment: {
-      type: 'link',
-      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-      title: '榕樹生態短片介紹',
-      metadata: {
-        youtubeId: 'dQw4w9WgXcQ',
-      },
-    },
-    status: 'approved',
-    orderIndex: 0,
-    likeCount: 3,
-    upvotes: 3,
-    downvotes: 0,
-    starAverage: 5,
-    starCount: 2,
-    commentCount: 0,
-    createdAt: new Date(Date.now() - 1800000).toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+// 系統預設資料（若無任何資料庫或檔案，初始為乾淨空陣列）
+const DEFAULT_BOARDS: Board[] = [];
+const DEFAULT_SECTIONS: Section[] = [];
+const DEFAULT_POSTS: Post[] = [];
 
 export const db = {
   ensureHydrated,
 
   // Boards
   getBoards: (): Board[] => {
-    return readJson<Board[]>(BOARDS_FILE, [DEFAULT_BOARD], 'boards');
+    return readJson<Board[]>(BOARDS_FILE, DEFAULT_BOARDS, 'boards');
   },
   getBoardById: (id: string): Board | undefined => {
     const boards = db.getBoards();

@@ -281,7 +281,7 @@ export default function HomePage() {
           <div className="text-center py-16 text-gray-400 text-sm font-medium">
             讀取看板資料中...
           </div>
-        ) : (
+        ) : popularBoards.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {popularBoards.map((b) => (
               <BoardCard
@@ -290,6 +290,27 @@ export default function HomePage() {
                 isMyBoard={isBoardMine(b)}
               />
             ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border-2 border-dashed border-rose-200/90 p-10 text-center shadow-2xs">
+            <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-3 text-3xl">
+              🍂
+            </div>
+            <h3 className="text-base font-black text-gray-900 mb-1">
+              目前系統內尚無活動看板
+            </h3>
+            <p className="text-xs text-gray-500 max-w-md mx-auto mb-5 leading-relaxed font-medium">
+              目前尚無公開的教學看板。教師或系統管理員可隨時點擊下方或右上角按鈕，建立新的課堂協作看板！
+            </p>
+            {(currentUser?.role === 'teacher' || currentUser?.role === 'admin') && (
+              <button
+                onClick={() => setIsCreateBoardOpen(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-black text-xs shadow-md shadow-amber-600/20 transition"
+              >
+                <Plus className="w-4 h-4" />
+                <span>立即建立第一個看板</span>
+              </button>
+            )}
           </div>
         )}
       </section>
