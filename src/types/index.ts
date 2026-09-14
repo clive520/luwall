@@ -46,7 +46,7 @@ export interface Section {
   createdAt: string;
 }
 
-export type MediaType = 'none' | 'image' | 'audio' | 'link';
+export type MediaType = 'none' | 'image' | 'audio' | 'link' | 'file';
 
 export interface MediaAttachment {
   type: MediaType;
@@ -61,6 +61,11 @@ export interface MediaAttachment {
     ogTitle?: string;
     ogDescription?: string;
     favicon?: string;
+    // 檔案附件專屬屬性
+    fileName?: string;
+    fileSize?: number; // bytes
+    fileExtension?: string; // pdf, docx, pptx, xlsx, zip, mp3 等
+    mimeType?: string;
   };
 }
 

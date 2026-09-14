@@ -39,7 +39,7 @@ export interface UploadOptions {
   buffer: Buffer;
   mime: string;
   originalName: string;
-  folder?: 'images' | 'audio';
+  folder?: 'images' | 'audio' | 'documents';
 }
 
 export async function uploadToR2(options: UploadOptions): Promise<string> {

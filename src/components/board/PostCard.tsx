@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Post, Comment, User, Section, MediaAttachment } from '@/types';
 import { LinkifiedText } from '@/components/common/LinkifiedText';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
+import { FileAttachmentCard } from '@/components/media/FileAttachmentCard';
 import { EditPostModal } from '@/components/board/EditPostModal';
 import { findUrls, extractYouTubeId, getYouTubeThumbnail } from '@/lib/media';
 import {
@@ -190,9 +191,12 @@ export function PostCard({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // 1. 圖片或錄音檔案附件
+  // 1. 圖片、錄音或各類文件檔案附件
   const fileAttachment = useMemo(() => {
-    if (post.attachment && (post.attachment.type === 'image' || post.attachment.type === 'audio')) {
+    if (
+      post.attachment &&
+      (post.attachment.type === 'image' || post.attachment.type === 'audio' || post.attachment.type === 'file')
+    ) {
       return post.attachment;
     }
     return null;
@@ -348,6 +352,11 @@ export function PostCard({
                   <audio controls src={fileAttachment.url} className="w-full h-8" />
                 </div>
               </div>
+            )}
+
+            {/* 檔案/文件附件 (PDF、Word、PPT、Excel、ZIP 等) */}
+            {fileAttachment?.type === 'file' && (
+              <FileAttachmentCard attachment={fileAttachment} />
             )}
 
             {/* 外部連結或 YouTube 縮圖卡片 (若有 2 個或超過 2 個連結，將兩者縮圖/截圖同時呈現) */}

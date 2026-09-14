@@ -4,12 +4,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Board, User, MediaAttachment, Section, Post } from '@/types';
 import { AudioRecorder, AudioRecorderHandle } from '@/components/media/AudioRecorder';
 import { LinkPreviewCard } from '@/components/media/LinkPreviewCard';
+import { FileAttachmentCard } from '@/components/media/FileAttachmentCard';
 import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
 import {
   X,
   Image as ImageIcon,
   Mic,
   Link as LinkIcon,
+  Paperclip,
   Send,
   Loader2,
   AlertCircle,
@@ -24,7 +26,7 @@ interface CreatePostModalProps {
   sections?: Section[];
   defaultSectionId?: string;
   initialAttachment?: MediaAttachment;
-  initialMediaType?: 'none' | 'image' | 'audio' | 'link';
+  initialMediaType?: 'none' | 'image' | 'audio' | 'link' | 'file';
   initialPos?: { x: number; y: number };
   currentUser: User | null;
   isOpen: boolean;
@@ -59,10 +61,11 @@ export function CreatePostModal({
   const [authorName, setAuthorName] = useState(currentUser?.name || '');
   const [selectedSectionId, setSelectedSectionId] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState('#fef08a');
-  const [mediaType, setMediaType] = useState<'none' | 'image' | 'audio' | 'link'>(initialMediaType);
+  const [mediaType, setMediaType] = useState<'none' | 'image' | 'audio' | 'link' | 'file'>(initialMediaType);
   const [attachment, setAttachment] = useState<MediaAttachment | undefined>(initialAttachment);
   const [linkInput, setLinkInput] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
   const [loadingLinkPreview, setLoadingLinkPreview] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,23 +133,31 @@ export function CreatePostModal({
 
   if (!isOpen) return null;
 
-  // 上傳圖片處理核心邏輯 (支援拖曳、剪貼簿與檔案選擇)
-  const uploadImageFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      setError('請選擇圖片檔案（支援 JPG、PNG、WebP、GIF 等）');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('圖片大小不能超過 5MB');
+  // 上傳圖片或各類文件檔案核心邏輯 (支援拖曳、剪貼簿與檔案選擇)
+  const uploadFileOrDocument = async (file: File) => {
+    // 嚴格拒絕影片直接上傳
+    if (file.type.toLowerCase().startsWith('video/')) {
+      setError('為保障系統效能，不支援影片直接上傳，請貼入 YouTube 或影片外部連結！');
       return;
     }
 
-    setUploadingImage(true);
+    if (file.size > 20 * 1024 * 1024) {
+      setError('檔案大小不能超過 20MB');
+      return;
+    }
+
+    const isImage = file.type.startsWith('image/');
+    if (isImage) {
+      setUploadingImage(true);
+    } else {
+      setUploadingFile(true);
+    }
     setError(null);
+
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'image');
+      formData.append('type', isImage ? 'image' : 'file');
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -154,26 +165,52 @@ export function CreatePostModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || '圖片上傳失敗');
+        throw new Error(data.error || '檔案上傳失敗');
       }
 
-      setAttachment({
-        type: 'image',
-        url: data.url,
-        title: file.name,
-      });
-      setMediaType('image');
+      if (isImage) {
+        setAttachment({
+          type: 'image',
+          url: data.url,
+          title: file.name,
+        });
+        setMediaType('image');
+      } else {
+        setAttachment({
+          type: 'file',
+          url: data.url,
+          title: file.name,
+          metadata: {
+            fileName: data.fileName || file.name,
+            fileSize: data.size || file.size,
+            fileExtension: data.fileExtension || file.name.split('.').pop() || '',
+            mimeType: data.mimeType || file.type,
+          },
+        });
+        setMediaType('file');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '上傳失敗';
       setError(msg);
     } finally {
-      setUploadingImage(false);
+      if (isImage) {
+        setUploadingImage(false);
+      } else {
+        setUploadingFile(false);
+      }
     }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) await uploadImageFile(file);
+    if (file) await uploadFileOrDocument(file);
+    e.target.value = ''; // 清空以利重複選取相同檔案
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadFileOrDocument(file);
+    e.target.value = '';
   };
 
   // 拖曳處理
@@ -196,7 +233,7 @@ export function CreatePostModal({
     setIsDraggingFile(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      await uploadImageFile(files[0]);
+      await uploadFileOrDocument(files[0]);
     }
   };
 
@@ -208,7 +245,7 @@ export function CreatePostModal({
       if (items[i].type.startsWith('image/')) {
         const file = items[i].getAsFile();
         if (file) {
-          await uploadImageFile(file);
+          await uploadFileOrDocument(file);
           return;
         }
       }
@@ -431,12 +468,12 @@ export function CreatePostModal({
         onPaste={handlePaste}
         className="rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col shadow-2xl border-2 border-black/20 overflow-hidden relative transition-colors duration-200"
       >
-        {/* 拖曳照片提示覆蓋層 */}
+        {/* 拖曳照片與檔案提示覆蓋層 */}
         {isDraggingFile && (
           <div className="absolute inset-0 z-40 bg-amber-500/90 text-white flex flex-col items-center justify-center p-6 text-center backdrop-blur-xs border-4 border-dashed border-white rounded-3xl animate-pulse pointer-events-none">
             <UploadCloud className="w-16 h-16 mb-2" />
-            <p className="text-lg font-black">放開滑鼠立即上傳照片 📸</p>
-            <p className="text-xs text-white/90 mt-1">支援照片直接拖曳或剪貼簿 Ctrl+V 貼上</p>
+            <p className="text-lg font-black">放開滑鼠立即上傳照片或教學檔案 (PDF/Word/PPT/ZIP) 📁</p>
+            <p className="text-xs text-white/90 mt-1">支援照片、各類教學文件直接拖曳，或剪貼簿 Ctrl+V 貼上照片</p>
           </div>
         )}
 
@@ -601,7 +638,26 @@ export function CreatePostModal({
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    disabled={uploadingImage}
+                    disabled={uploadingImage || uploadingFile}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* 檔案/PDF 上傳按鈕 */}
+                <label
+                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black cursor-pointer transition shadow-xs ${
+                    mediaType === 'file'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-white hover:bg-gray-100 text-gray-900 border border-gray-300'
+                  }`}
+                >
+                  <Paperclip className="w-4 h-4" />
+                  <span>{uploadingFile ? '上傳中...' : '檔案/PDF'}</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.odt,.odp,.ods,.txt,.zip,.rar,.7z,.mp3,.m4a,.wav"
+                    onChange={handleFileUpload}
+                    disabled={uploadingImage || uploadingFile}
                     className="hidden"
                   />
                 </label>
@@ -756,6 +812,17 @@ export function CreatePostModal({
                   </div>
                 )}
 
+                {attachment.type === 'file' && (
+                  <FileAttachmentCard
+                    attachment={attachment}
+                    canRemove={true}
+                    onRemove={() => {
+                      setAttachment(undefined);
+                      setMediaType('none');
+                    }}
+                  />
+                )}
+
                 {/* 顯示內文中額外偵測到的連結縮圖 (例如第二個連結) */}
                 {extraLinksFromContent.length > 0 && (
                   <div className="space-y-2 pt-1 border-t border-black/10">
@@ -792,7 +859,7 @@ export function CreatePostModal({
             </button>
             <button
               type="submit"
-              disabled={submitting || uploadingImage}
+              disabled={submitting || uploadingImage || uploadingFile}
               className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white text-xs font-black shadow-xs transition disabled:opacity-50 flex items-center gap-1.5"
             >
               {submitting ? (

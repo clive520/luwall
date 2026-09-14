@@ -105,21 +105,23 @@ export function ShelfView({
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    if (!file.type.startsWith('image/')) {
-      alert('請拖曳圖片檔案（支援 JPG、PNG、WebP、GIF 等）');
+    if (file.type.toLowerCase().startsWith('video/')) {
+      alert('為保障系統效能，不支援影片直接上傳，請貼入 YouTube 連結！');
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('圖片大小不能超過 5MB');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('檔案大小不能超過 20MB');
       return;
     }
+
+    const isImage = file.type.startsWith('image/');
 
     setUploadingSectionId(sectionId);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'image');
+      formData.append('type', isImage ? 'image' : 'file');
 
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -127,14 +129,26 @@ export function ShelfView({
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || '圖片上傳失敗');
+        throw new Error(data.error || '檔案上傳失敗');
       }
 
-      const attachment: MediaAttachment = {
-        type: 'image',
-        url: data.url,
-        title: file.name,
-      };
+      const attachment: MediaAttachment = isImage
+        ? {
+            type: 'image',
+            url: data.url,
+            title: file.name,
+          }
+        : {
+            type: 'file',
+            url: data.url,
+            title: file.name,
+            metadata: {
+              fileName: data.fileName || file.name,
+              fileSize: data.size || file.size,
+              fileExtension: data.fileExtension || file.name.split('.').pop() || '',
+              mimeType: data.mimeType || file.type,
+            },
+          };
 
       onOpenCreatePost(sectionId, attachment);
     } catch (err: unknown) {
@@ -480,14 +494,14 @@ export function ShelfView({
                   {isColumnUploading ? (
                     <>
                       <Loader2 className="w-12 h-12 mb-2 animate-spin" />
-                      <p className="text-sm font-black">正在上傳照片中...</p>
+                      <p className="text-sm font-black">正在上傳檔案中...</p>
                       <p className="text-[11px] text-white/90 mt-1">上傳完成後將自動為您開啟便籤編輯！</p>
                     </>
                   ) : (
                     <>
                       <UploadCloud className="w-12 h-12 mb-2" />
-                      <p className="text-sm font-black">放開滑鼠以在此主題貼上照片 📸</p>
-                      <p className="text-[11px] text-white/90 mt-1">將自動上傳照片並開啟便籤</p>
+                      <p className="text-sm font-black">放開滑鼠以在此主題張貼照片或文件 📁</p>
+                      <p className="text-[11px] text-white/90 mt-1">支援照片、PDF、Word、PPT 等檔案自動上傳</p>
                     </>
                   )}
                 </div>
