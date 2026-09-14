@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/session';
 import { filterProfanity } from '@/lib/profanity';
 import { extractYouTubeId, getYouTubeThumbnail, findUrls } from '@/lib/media';
+import { deleteFromR2, isR2Url } from '@/lib/storage/r2';
 import { Post } from '@/types';
 
 export async function POST(request: NextRequest) {
@@ -189,6 +190,13 @@ export async function PATCH(request: NextRequest) {
     if (title !== undefined) updates.title = title;
     if (content !== undefined) updates.content = content;
     if (attachment !== undefined) {
+      // 若原貼文有 R2 附件，且本次編輯移除了附件或替換為其他網址，則刪除舊檔案
+      if (post.attachment?.url && isR2Url(post.attachment.url)) {
+        if (!attachment || attachment.url !== post.attachment.url) {
+          await deleteFromR2(post.attachment.url);
+        }
+      }
+
       if (attachment && attachment.type === 'link' && attachment.url) {
         const ytId = extractYouTubeId(attachment.url);
         if (ytId) {
@@ -249,6 +257,11 @@ export async function DELETE(request: NextRequest) {
     // - 學生：只能刪除自己發表的文章
     if (!isAdmin && !isBoardOwner && !isAuthor) {
       return NextResponse.json({ error: '權限不足：您只能刪除自己發表的貼文' }, { status: 403 });
+    }
+
+    // 若該貼文有存放於 R2 的附件檔案，一併予以刪除
+    if (post.attachment?.url && isR2Url(post.attachment.url)) {
+      await deleteFromR2(post.attachment.url);
     }
 
     await db.deletePost(postId);

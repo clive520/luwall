@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth/session';
+import { deleteFromR2, isR2Url } from '@/lib/storage/r2';
 
 export async function GET(
   request: NextRequest,
@@ -114,6 +115,19 @@ export async function DELETE(
     return NextResponse.json({ error: '權限不足：僅該看板擁有者或系統管理員可刪除此看板' }, { status: 403 });
   }
 
+  // 刪除此看板內所有貼文已上傳至 R2 的附件檔案
+  try {
+    const posts = await db.getPostsByBoardIdAsync(id, true);
+    await Promise.all(
+      posts
+        .filter((p) => p.attachment?.url && isR2Url(p.attachment.url))
+        .map((p) => deleteFromR2(p.attachment!.url))
+    );
+  } catch (err) {
+    console.warn(`[Board DELETE] 清理看板 ${id} 附件時發生錯誤:`, err);
+  }
+
   await db.deleteBoard(id);
   return NextResponse.json({ success: true });
 }
+

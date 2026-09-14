@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 const R2_ACCOUNT_ID = process.env.R2_ACCOUNT_ID || 'ca5d155a8d1dcb2a9ee6770606e12a15';
 const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '8558bea706a171f2ba5a93448426b5fd';
@@ -14,6 +14,15 @@ export function isR2Configured(): boolean {
     R2_BUCKET_NAME &&
     R2_PUBLIC_DOMAIN
   );
+}
+
+/**
+ * 檢查某個網址是否為此 R2 儲存桶託管的檔案
+ */
+export function isR2Url(fileUrl?: string): boolean {
+  if (!fileUrl || !isR2Configured()) return false;
+  const baseDomain = R2_PUBLIC_DOMAIN!.replace(/\/+$/, '');
+  return fileUrl.startsWith(baseDomain);
 }
 
 let s3ClientInstance: S3Client | null = null;
@@ -64,3 +73,36 @@ export async function uploadToR2(options: UploadOptions): Promise<string> {
   const baseDomain = R2_PUBLIC_DOMAIN!.replace(/\/+$/, '');
   return `${baseDomain}/${key}`;
 }
+
+/**
+ * 從 Cloudflare R2 永久刪除單一檔案
+ * @param fileUrl 檔案的完整公開網址
+ */
+export async function deleteFromR2(fileUrl: string): Promise<boolean> {
+  if (!fileUrl || !isR2Configured()) return false;
+  try {
+    const baseDomain = R2_PUBLIC_DOMAIN!.replace(/\/+$/, '');
+    if (!fileUrl.startsWith(baseDomain)) return false;
+
+    // 擷取 key (移除 baseDomain 與開頭的斜線)
+    const relativePath = fileUrl.substring(baseDomain.length).replace(/^\/+/, '');
+    if (!relativePath) return false;
+
+    const key = decodeURIComponent(relativePath);
+    const client = getS3Client();
+
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: R2_BUCKET_NAME!,
+        Key: key,
+      })
+    );
+
+    console.log(`[R2 Storage] 成功從雲端刪除檔案: ${key}`);
+    return true;
+  } catch (err) {
+    console.error(`[R2 Storage] 刪除檔案失敗 (${fileUrl}):`, err);
+    return false;
+  }
+}
+

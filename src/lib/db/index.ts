@@ -252,6 +252,14 @@ export const db = {
     const filtered = boards.filter((b) => b.id !== id);
     if (filtered.length === boards.length) return false;
     writeJson(BOARDS_FILE, filtered, 'boards');
+
+    // 連帶清理本看板所屬之主題分欄與便籤
+    const allSections = readJson<Section[]>(SECTIONS_FILE, DEFAULT_SECTIONS, 'sections');
+    writeJson(SECTIONS_FILE, allSections.filter((s) => s.boardId !== id), 'sections');
+
+    const allPosts = readJson<Post[]>(POSTS_FILE, DEFAULT_POSTS, 'posts');
+    writeJson(POSTS_FILE, allPosts.filter((p) => p.boardId !== id), 'posts');
+
     lastHydratedAt = 0;
     if (isSupabaseConfigured()) {
       await deleteBoardFromSupabase(id);
