@@ -336,181 +336,166 @@ export default function BoardPage({
       {/* 看板頂部橫幅（全螢幕模式下隱藏） */}
       {!isFullscreen && (
         <div className={`w-full bg-gradient-to-r ${board.coverColor || 'from-emerald-500 to-teal-700'} text-white shadow-md transition-all`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* 標題與說明 */}
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2 mb-2">
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-[11px] font-semibold backdrop-blur transition"
-                >
-                  <ArrowLeft className="w-3 h-3" />
-                  <span>所有看板</span>
-                </Link>
-                <span className="px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-bold backdrop-blur flex items-center gap-1">
-                  {board.layoutType === 'wall' ? (
-                    <>
-                      <LayoutGrid className="w-3 h-3" />
-                      磚牆
-                    </>
-                  ) : board.layoutType === 'canvas' ? (
-                    <>
-                      <Sparkles className="w-3 h-3" />
-                      自由
-                    </>
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+              {/* 左側：標題與精簡資訊 */}
+              <div className="min-w-0">
+                {/* 第一行：返回按鈕、看板名稱、即時連線標籤 */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-[11px] font-semibold backdrop-blur transition shrink-0"
+                    title="返回所有看板"
+                  >
+                    <ArrowLeft className="w-3 h-3" />
+                    <span className="hidden sm:inline">所有看板</span>
+                  </Link>
+
+                  <h1 className="text-base sm:text-xl font-bold tracking-tight drop-shadow-xs truncate" title={board.title}>
+                    {board.title}
+                  </h1>
+
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-400/30 text-emerald-100 text-[10px] font-medium backdrop-blur shrink-0">
+                    <Radio className="w-2.5 h-2.5 animate-pulse text-emerald-300" />
+                    <span className="hidden sm:inline">即時連線中</span>
+                  </span>
+                </div>
+
+                {/* 第二行：課堂機制微型徽章 */}
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-black/20 text-white/90">
+                    板主：{board.creatorName}
+                  </span>
+                  <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-white/20 text-white">
+                    主題分類：{sections.length} 個
+                  </span>
+                  {board.isPublic === false ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-400/30 text-amber-100 font-bold">
+                      <Lock className="w-2.5 h-2.5" />
+                      校內私人
+                    </span>
                   ) : (
-                    <>
-                      <Layers className="w-3 h-3" />
-                      分欄
-                    </>
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/20 text-white">
+                      <Globe className="w-2.5 h-2.5" />
+                      公開看板
+                    </span>
                   )}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-400/30 text-emerald-100 text-[11px] font-medium backdrop-blur">
-                  <Radio className="w-3 h-3 animate-pulse" />
-                  即時連線中
-                </span>
+                  {board.allowGuest ? (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-white/20 text-white">
+                      <UserCheck className="w-2.5 h-2.5" />
+                      免登入可寫
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-black/20 text-white/90">
+                      需登入
+                    </span>
+                  )}
+                  {board.requireApproval && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-400/30 text-amber-100 font-bold">
+                      <ShieldCheck className="w-2.5 h-2.5" />
+                      需審核
+                    </span>
+                  )}
+                  {board.description && (
+                    <span className="text-white/80 text-[11px] truncate max-w-xs sm:max-w-md hidden md:inline ml-1" title={board.description}>
+                      · {board.description}
+                    </span>
+                  )}
+                </div>
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-xs mb-1.5">
-                {board.title}
-              </h1>
+              {/* 右側：精巧操作按鈕群 */}
+              <div className="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+                {/* 版型切換快捷鍵（分欄 vs 磚牆 vs 自由） */}
+                <div className="inline-flex items-center p-0.5 rounded-xl bg-black/20 backdrop-blur border border-white/20 shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLayout('shelf')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      (board.layoutType || 'shelf') === 'shelf'
+                        ? 'bg-white text-gray-900 shadow-xs'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                    title="分欄模式"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">分欄</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLayout('wall')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      board.layoutType === 'wall'
+                        ? 'bg-white text-gray-900 shadow-xs'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                    title="磚牆模式"
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">磚牆</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleLayout('canvas')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                      board.layoutType === 'canvas'
+                        ? 'bg-white text-gray-900 shadow-xs'
+                        : 'text-white/80 hover:text-white'
+                    }`}
+                    title="自由模式"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">自由</span>
+                  </button>
+                </div>
 
-              {board.description && (
-                <p className="text-xs sm:text-sm text-white/90 leading-relaxed font-medium">
-                  {board.description}
-                </p>
-              )}
-
-              {/* 課堂機制徽章 */}
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px]">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 text-white/90">
-                  板主：{board.creatorName}
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
-                  主題分類：{sections.length} 個
-                </span>
-                {board.isPublic === false ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400/30 text-amber-100 font-bold">
-                    <Lock className="w-3 h-3" />
-                    校內私人看板
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
-                    <Globe className="w-3 h-3" />
-                    公開看板
-                  </span>
-                )}
-                {board.allowGuest ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 text-white">
-                    <UserCheck className="w-3 h-3" />
-                    學生免登入可寫
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-black/20 text-white/90">
-                    需登入才可發表
-                  </span>
-                )}
-                {board.requireApproval && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-400/30 text-amber-100 font-bold">
-                    <ShieldCheck className="w-3 h-3" />
-                    需教師審核
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* 操作按鈕群（投影 QR Code、看板設定、新增卡片） */}
-            <div className="flex flex-wrap items-center gap-2 sm:self-end">
-              {/* 版型切換快捷鍵（分欄 vs 磚牆 vs 自由） */}
-              <div className="inline-flex items-center p-0.5 rounded-2xl bg-black/20 backdrop-blur border border-white/20 shadow-xs">
+                {/* QR Code 投影 */}
                 <button
                   type="button"
-                  onClick={() => handleToggleLayout('shelf')}
-                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
-                    (board.layoutType || 'shelf') === 'shelf'
-                      ? 'bg-white text-gray-900 shadow-xs'
-                      : 'text-white/80 hover:text-white'
-                  }`}
-                  title="分欄模式"
+                  onClick={() => setIsQRCodeOpen(true)}
+                  className="p-2 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                  title="投影 QR Code 📱"
                 >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">分欄</span>
+                  <QrCode className="w-3.5 h-3.5" />
                 </button>
+
+                {/* 全螢幕展示切換 */}
                 <button
                   type="button"
-                  onClick={() => handleToggleLayout('wall')}
-                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
-                    board.layoutType === 'wall'
-                      ? 'bg-white text-gray-900 shadow-xs'
-                      : 'text-white/80 hover:text-white'
-                  }`}
-                  title="磚牆模式"
+                  onClick={handleToggleFullscreen}
+                  className="p-2 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                  title="全螢幕展示 ⛶"
                 >
-                  <LayoutGrid className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">磚牆</span>
+                  <Maximize className="w-3.5 h-3.5" />
                 </button>
+
+                {/* 看板開立者 / 管理員專屬：看板設定按鈕 */}
+                {isOwner && (
+                  <button
+                    type="button"
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="p-2 rounded-xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
+                    title="看板設定 ⚙️"
+                  >
+                    <Settings className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* 新增便籤 */}
                 <button
                   type="button"
-                  onClick={() => handleToggleLayout('canvas')}
-                  className={`inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold transition ${
-                    board.layoutType === 'canvas'
-                      ? 'bg-white text-gray-900 shadow-xs'
-                      : 'text-white/80 hover:text-white'
-                  }`}
-                  title="自由模式"
+                  onClick={() => handleOpenCreatePost()}
+                  className="p-2 rounded-xl bg-white text-gray-900 hover:bg-amber-50 shadow-sm transition transform active:scale-95"
+                  title="新增便籤 📝"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">自由</span>
+                  <Plus className="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
                 </button>
               </div>
-
-              {/* QR Code 投影 */}
-              <button
-                type="button"
-                onClick={() => setIsQRCodeOpen(true)}
-                className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
-                title="投影 QR Code 📱"
-              >
-                <QrCode className="w-4 h-4" />
-              </button>
-
-              {/* 全螢幕展示切換 */}
-              <button
-                type="button"
-                onClick={handleToggleFullscreen}
-                className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
-                title="全螢幕展示 ⛶"
-              >
-                <Maximize className="w-4 h-4" />
-              </button>
-
-              {/* 看板開立者 / 管理員專屬：看板設定按鈕 */}
-              {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="p-2.5 rounded-2xl bg-white/20 hover:bg-white/30 active:bg-white/40 text-white backdrop-blur border border-white/20 shadow-xs transition active:scale-95"
-                  title="看板設定 ⚙️"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
-              )}
-
-              {/* 新增便籤 */}
-              <button
-                type="button"
-                onClick={() => handleOpenCreatePost()}
-                className="p-2.5 rounded-2xl bg-white text-gray-900 hover:bg-amber-50 shadow-md transition transform active:scale-95"
-                title="新增便籤 📝"
-              >
-                <Plus className="w-4 h-4 text-amber-600 stroke-[2.5]" />
-              </button>
             </div>
           </div>
         </div>
-      </div>
       )}
+
 
       {/* 全螢幕模式浮動退出按鈕 */}
       {isFullscreen && (
