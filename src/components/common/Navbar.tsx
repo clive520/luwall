@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User } from '@/types';
@@ -8,19 +8,54 @@ import { ThemeSwitcher } from './ThemeSwitcher';
 import { ApplyTeacherModal } from './ApplyTeacherModal';
 import { UserProfileModal } from './UserProfileModal';
 import { getBrowserSupabase } from '@/lib/supabase/client';
-import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell, UserCog } from 'lucide-react';
+import { PlusCircle, LogIn, LogOut, School, Crown, GraduationCap, Briefcase, Clock, Bell, UserCog, ChevronDown } from 'lucide-react';
 
 interface NavbarProps {
   onOpenCreateBoard?: () => void;
+  autoHide?: boolean;
 }
 
-export function Navbar({ onOpenCreateBoard }: NavbarProps) {
+export function Navbar({ onOpenCreateBoard, autoHide = false }: NavbarProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+
+  // 看板內自動隱藏導覽列邏輯
+  const [isHovered, setIsHovered] = useState(false);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isMouseInsideNavbar = useRef(false);
+
+  useEffect(() => {
+    if (!autoHide) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // 當滑鼠移動到距離螢幕頂部 25px 以內時，自動滑出導覽列
+      if (e.clientY <= 25) {
+        if (hideTimerRef.current) {
+          clearTimeout(hideTimerRef.current);
+          hideTimerRef.current = null;
+        }
+        setIsHovered(true);
+      } else if (e.clientY > 90 && !isMouseInsideNavbar.current) {
+        // 當滑鼠移離導覽列範圍 (Navbar 高度為 64px)
+        if (!hideTimerRef.current) {
+          hideTimerRef.current = setTimeout(() => {
+            setIsHovered(false);
+            hideTimerRef.current = null;
+          }, 250);
+        }
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [autoHide]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -74,7 +109,67 @@ export function Navbar({ onOpenCreateBoard }: NavbarProps) {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xs transition-colors">
+      {/* 若開啟 autoHide，當導覽列隱藏時在頂部中央提供微型展開指示頁籤與頂端感應條 */}
+      {autoHide && (
+        <div
+          className="fixed top-0 left-0 right-0 h-4 z-40 pointer-events-auto"
+          onMouseEnter={() => {
+            if (hideTimerRef.current) {
+              clearTimeout(hideTimerRef.current);
+              hideTimerRef.current = null;
+            }
+            setIsHovered(true);
+          }}
+        />
+      )}
+
+      {autoHide && !isHovered && (
+        <button
+          type="button"
+          onClick={() => setIsHovered(true)}
+          onMouseEnter={() => {
+            if (hideTimerRef.current) {
+              clearTimeout(hideTimerRef.current);
+              hideTimerRef.current = null;
+            }
+            setIsHovered(true);
+          }}
+          className="fixed top-0 left-1/2 -translate-x-1/2 z-40 px-3 py-0.5 rounded-b-lg bg-black/40 hover:bg-black/70 text-white/90 hover:text-white text-[10px] font-medium backdrop-blur shadow-sm transition-all duration-200 flex items-center gap-1 opacity-70 hover:opacity-100 group cursor-pointer"
+          title="移至頂端或點擊展開系統主選單"
+        >
+          <span className="group-hover:scale-110 transition-transform">🦌</span>
+          <span className="hidden sm:inline">系統主選單</span>
+          <ChevronDown className="w-2.5 h-2.5 group-hover:translate-y-0.5 transition-transform" />
+        </button>
+      )}
+
+      <header
+        onMouseEnter={() => {
+          if (!autoHide) return;
+          isMouseInsideNavbar.current = true;
+          if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current);
+            hideTimerRef.current = null;
+          }
+          setIsHovered(true);
+        }}
+        onMouseLeave={() => {
+          if (!autoHide) return;
+          isMouseInsideNavbar.current = false;
+          if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+          hideTimerRef.current = setTimeout(() => {
+            setIsHovered(false);
+            hideTimerRef.current = null;
+          }, 250);
+        }}
+        className={
+          autoHide
+            ? `fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xl transition-all duration-300 ease-out transform ${
+                isHovered ? 'translate-y-0 opacity-100 pointer-events-auto' : '-translate-y-full opacity-0 pointer-events-none'
+              }`
+            : 'sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-gray-200 dark:border-slate-800 shadow-xs transition-colors'
+        }
+      >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo 與品牌 */}
         <Link href="/" className="flex items-center gap-3 group">

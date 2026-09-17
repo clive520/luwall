@@ -331,7 +331,7 @@ export default function BoardPage({
         isFullscreen ? 'h-screen overflow-hidden' : ''
       }`}
     >
-      {!isFullscreen && <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} />}
+      {!isFullscreen && <Navbar onOpenCreateBoard={() => setIsCreateBoardOpen(true)} autoHide />}
 
       {/* 看板頂部橫幅（全螢幕模式下隱藏） */}
       {!isFullscreen && (
